@@ -22,52 +22,6 @@ BIG-DIG-HEAP lets you:
 
 The modern web is ephemeral. Pages disappear or change without notice, yet many contain content we want preserved. Traditional archival systems are centralized and depend on single entities. BIG-DIG-HEAP moves archiving into a decentralized realm, leveraging Qortal’s blockchain and distributed storage to make archives resilient, censorship-resistant, and verifiable.
 
-🧩 Architecture
-
-BIG-DIG-HEAP consists of:
-
-🔹 Crawler Subsystem
-
-A Python service (using Playwright) that:
-
-Renders dynamic web pages
-
-Captures HTML, screenshots, and optionally WARC files
-
-Produces archive manifests and asset bundles
-
-🔹 Backend API
-
-A FastAPI service that:
-
-Accepts archive requests
-
-Queues crawl jobs
-
-Reports status and metadata
-
-Orchestrates packaging and publishing
-
-🔹 Qortal Bridge
-
-A module that:
-
-Publishes archive manifests to Qortal
-
-Uploads chunks to QDN
-
-Records immutable references on the blockchain
-
-🔹 Q-App Frontend
-
-A lightweight JavaScript Qortal App that:
-
-Lets users submit URLs for archiving
-
-Displays status and snapshot history
-
-Fetches archived content from decentralized storage
-
 📦 Features
 
 ⭐ High-fidelity snapshots
@@ -88,37 +42,67 @@ Fetches archived content from decentralized storage
 ✔ Simple UI for users
 ✔ Native Qortal publishing and retrieval
 
+🧩 Architecture
+
+BIG-DIG-HEAP consists of:
+
+* Crawler Subsystem
+  * A Python service (using Playwright) that:
+  * Renders dynamic web pages
+  * Captures HTML, screenshots, and optionally WARC files
+  * Produces archive manifests and asset bundles
+
+* Backend API
+  * A FastAPI service that:
+    * Accepts archive requests
+    * Queues crawl jobs
+    * Reports status and metadata
+
+* Orchestrates packaging and publishing
+
+* Qortal Bridge
+
+* A module that:
+  * Publishes archive manifests to Qortal
+  * Uploads chunks to QDN
+  * Records immutable references on the blockchain
+
+* Q-App Frontend
+  * A lightweight JavaScript Qortal App that:
+    * Lets users submit URLs for archiving
+    * Displays status and snapshot history
+    * Fetches archived content from decentralized storage
+
+---
+
 🛠️ Getting Started
-Prerequisites
 
-Python 3.10+
+* Prerequisites
+  * Python 3.10+
+  * Node.js & NPM
+  * Docker (optional)
+  * Qortal Core or access to Qortal API
 
-Node.js & NPM
+🛠️ Quick Start
 
-Docker (optional)
-
-Qortal Core or access to Qortal API
-
-Quick Start
-
-Clone the repo
-
+  * Clone the repo  
+```
 git clone https://github.com/yourusername/big-dig-heap.git
 cd big-dig-heap
-
-
-Launch development environment
-
+```
+  * Launch development environment
+```
 docker compose up --build
+```
+  * Access services
+  
+Backend API: `http://localhost:8000`
 
+Q-App UI: `http://localhost:8080`
 
-Access services
+API docs: `http://localhost:8000/docs`
 
-Backend API: http://localhost:8000
-
-Q-App UI: http://localhost:8080
-
-API docs: http://localhost:8000/docs
+---
 
 ```
 📁 Project Structure
@@ -142,58 +126,163 @@ Check Job Status
 ```
 curl http://localhost:8000/archive/<JOB_ID>
 ```
+---
 
 🧠 How It Works
 
-User submits a URL via the Q-App or REST API.
+1. User submits a URL via the Q-App or REST API.
 
-Backend queues a crawl job.
+2. Backend queues a crawl job.
 
-Crawler fetches and renders the page, then packages assets.
+3. Crawler fetches and renders the page, then packages assets.
 
-Archive manifest is generated and hashes computed.
+4. Archive manifest is generated and hashes computed.
 
-Manifest uploaded to QDN; hashes committed to Qortal blockchain.
+5. Manifest uploaded to QDN; hashes committed to Qortal blockchain.
 
-Snapshots can be retrieved via the Q-App or direct fetch from QDN.
+6. Snapshots can be retrieved via the Q-App or direct fetch from QDN.
+
+---
 
 💡 Contributing
 
 Contributions are welcome! Feel free to:
 
-Improve crawler fidelity
+* Improve crawler fidelity
 
-Add search or indexing
+* Add search or indexing
 
-Expand Q-App UI features
+* Expand Q-App UI features
 
-Harden job scheduling and retries
+* Harden job scheduling and retries
+
+---
 
 📜 License
 
-This project is released under the MIT License — see LICENSE for details.
+This project is released under the MIT License — see [LICENSE.md](LICENSE.md) for details.
 
 🪙 Acknowledgements
 
 BIG-DIG-HEAP was inspired by open archival tools and decentralized storage innovations.
 
+---
 
-# TECHNICAL REFERENCE
+# TECHNICAL DESIGN NOTES
 
 🧠 Understanding the Key Concepts
 
 1️⃣ What Qortal Provides
 
-Blockchain + Data Network (QDN): Qortal’s QDN lets you store encrypted, chunked data in a peer-to-peer network secured by the blockchain. 
+* Blockchain + Data Network (QDN): Qortal’s QDN lets you store encrypted, chunked data in a peer-to-peer network secured by the blockchain. 
 Qortal
 
-Publishing Websites & Apps: Qortal supports publishing websites and apps (Q-Apps) that are hosted decentralized, fee-less and indefinitely. 
+* Publishing Websites & Apps: Qortal supports publishing websites and apps (Q-Apps) that are hosted decentralized, fee-less and indefinitely. 
 wiki.qortal.org
 
-Q-Apps API: JavaScript-based apps can interact with users and the blockchain through Qortal’s APIs, making it usable with modern front-ends. 
+* Q-Apps API: JavaScript-based apps can interact with users and the blockchain through Qortal’s APIs, making it usable with modern front-ends. 
 Qortal
 
-BIG-DIG-HEAP app will likely be a architecture — a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
+* BIG-DIG-HEAP app will likely be a architecture — a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
+
+---
+
+🧩 What Web Archiving Usually Involves
+
+Before we plug into decentralized storage, let’s take a quick look at design patterns from existing archiving tools:
+
+📌 Archive Tools & Techniques
+
+* Archive.today / archive.is: Takes snapshots of a page’s appearance and static content and stores them for retrieval. 
+Wikipedia
+
+* Wayback Machine: Crawls and stores periodic snapshots for replay over time. 
+Wikipedia
+
+* ArchiveBox: Open-source tool for self-hosted web archiving and retrieval, can store HTML, JS, PDFs, screenshots, WARC files, media, etc. 
+
+These tools mix crawling logic (download, render, process content) with storage formats (HTML, WARC, screenshots) that BIG-DIG-HEAP needs to model or interface with.
+
+---
+
+🛠️ Architecture Outline for BIG-DIG-HEAP
+
+🧱 1. Crawler & Archival Backend
+
+* Build a service (e.g., in Python, Go, Rust, or Node.js) that:
+
+* Accepts a URL to archive
+
+* Fetches the page (headless browser or HTTP fetch)
+
+* Renders dynamic content (needs a headless browser like Puppeteer/Playwright)
+
+* Extracts content (HTML, CSS, JS, media, images)
+
+* Generates snapshots (HTML screenshot, PDF, WARC)
+
+* Stores metadata (timestamp, hashes, dependencies)
+
+* This is similar in intent to ArchiveBox but tailored to the needs of BIG-DIG-HEAP.
+
+---
+
+📦 2. Chunking & Storage Module
+
+Because Qortal’s Data Network can store encrypted, chunked data, BIG-DIG-HEAP needs:
+
+* A component to chunk archived data
+
+* Compute content hashes
+
+* Build a manifest describing the archive snapshot
+
+* Publish a hash manifest transaction to Qortal so others can fetch and validate content. 
+  
+This step bridges archiving logic with Qortal’s decentralized storage layer.
+
+---
+
+🔗 3. Q-App Frontend
+
+Develop a Q-App (likely JavaScript with a modern UI framework like React or Svelte) that:
+
+* Lets users submit URLs to be archived
+
+* Shows archival status and versions
+
+* Lists archived snapshots with metadata
+
+* Fetches archived content using QDN’s decentralized fetch APIs
+
+The Q-App would interact with BIG-DIG-HEAP backend (crawler) and Qortal to coordinate storage and retrieval.
+
+---
+
+🛡️ 4. Security, Integrity & Versioning
+
+* Every archived snapshot should include cryptographic hashes.
+
+* Storing hashes in the blockchain gives immutable proof of content versioning.
+
+* Consider formats like WARC, HTML + resource bundles, and even screenshots for extra fidelity.
+
+* These patterns are widely used in the archival community because they help with verifiability and replay accuracy.
+
+---
+
+📈 Development Technologies
+
+| Component	| Suggested Stack |
+| --------- | --------------- |
+| Crawler / Scraper	Puppeteer/Playwright (JS) or Headless Chrome / Chrome DevTools Protocol
+| Backend API |	Python (FastAPI), Go, or Rust (Actix/Hyper) |
+| Archival Storage Format | WARC, HTML Bundles, PDF, Screenshots |
+| Q-App Frontend | JavaScript + React / Svelte, Q-Apps API |
+| Deployment | Docker / Kubernetes for crawler service |
+
+
+---
 
 # High Level System Architecture
 
