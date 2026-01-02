@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: archive-backend
+    volumes:
+      - ./backend:/app/backend
+      - ./crawler:/app/crawler
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qortal_node
+
+  qapp:
+    build:
+      context: .
+      dockerfile: qapp/Dockerfile
+    container_name: archive-qapp
+    ports:
+      - "8080:80"
+
+  qortal_node:
+    image: qortal-bdh-image
+    container_name: qortal-bdh
+    volumes:
+      - qortal-data:/qortal/data
+    ports:
+      - "1234:1234"
+    environment:
+      - JAVA_OPTS=-Xmx512m
+
+volumes:
+  qortal-data:

@@ -1,0 +1,3 @@
+[submodule "qortal"]
+	path = qortal
+	url = https://github.com/Qortal/qortal.git
