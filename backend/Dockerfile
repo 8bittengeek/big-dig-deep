@@ -6,8 +6,8 @@ WORKDIR /app
 COPY backend/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY bdh/backend /app/backend
-COPY bdh/crawler /app/crawler
+COPY backend /app/backend
+COPY crawler /app/crawler
 
 RUN apt-get update && apt-get install -y \
     libnss3 \
