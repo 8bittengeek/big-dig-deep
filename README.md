@@ -140,10 +140,10 @@ The composition below includes a placeholder qortal_node service that expects yo
 /
 ├─ backend/        # FastAPI REST API
 ├─ crawler/        # Python snapshot & crawler logic
-├─ qortal-bdh/     # Bridge to Qortal publishing
+├─ qortal/         # Bridge to Qortal publishing
 ├─ qapp/           # Q-App frontend
 ├─ docker-compose.yml
-├─ README```.md
+├─ README.md
 ```
 
 🧪 Usage Examples
