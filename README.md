@@ -87,7 +87,7 @@ BIG-DIG-HEAP consists of:
 
   * Clone the repo  
 ```
-git clone https://github.com/yourusername/big-dig-heap.git
+git clone https://github.com/8bittengeek/big-dig-heap.git
 cd big-dig-heap
 git submodule init
 git submodule update
@@ -117,8 +117,11 @@ API docs: `http://localhost:8000/docs`
 This provides a consistent dev environment using containers so you can:
 
 ✅ Run your backend API and crawler in isolated containers
+
 ✅ Optionally run a local Qortal node (blockchain + QDN)
+
 ✅ Preview your Q‑App frontend
+
 ✅ Spin everything up with one command
 
 ⚠️ Important Note on Qortal Core:
@@ -127,15 +130,12 @@ Qortal Core doesn’t currently publish an official Docker image; it’s designe
 The composition below includes a placeholder qortal_node service that expects your own image (big-dig-heap‑image). You can replace it with your own custom build once available.
 
 
-
-
-
 ```
 📁 Project Structure
 /
 ├─ backend/        # FastAPI REST API
 ├─ crawler/        # Python snapshot & crawler logic
-├─ qortal/         # Bridge to Qortal publishing
+├─ qortal-bdh/     # Bridge to Qortal publishing
 ├─ qapp/           # Q-App frontend
 ├─ docker-compose.yml
 ├─ README```.md
