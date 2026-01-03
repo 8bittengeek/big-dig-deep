@@ -23,8 +23,8 @@ services:
       - "8080:80"
 
   qortal_node:
-    image: qortal-bdh-image
-    container_name: qortal-bdh
+    image: qortal-bdd-image
+    container_name: qortal-bdd
     volumes:
       - qortal-data:/qortal/data
     ports:
