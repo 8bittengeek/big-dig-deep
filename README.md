@@ -220,7 +220,7 @@ wiki.qortal.org
 * Q-Apps API: JavaScript-based apps can interact with users and the blockchain through Qortal’s APIs, making it usable with modern front-ends. 
 Qortal
 
-* BIG-DIG-HEAP app will likely be a architecture — a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
+* BIG-DIG-HEAP app consists of a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
 
 ---
 
@@ -282,7 +282,7 @@ This step bridges archiving logic with Qortal’s decentralized storage layer.
 
 🔗 3. Q-App Frontend
 
-Develop a Q-App (likely JavaScript with a modern UI framework like React or Svelte) that:
+Develop a Q-App (JavaScript with a modern UI framework like React or Svelte) that:
 
 * Lets users submit URLs to be archived
 
