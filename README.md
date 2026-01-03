@@ -1,10 +1,10 @@
-🏗️ BIG-DIG-HEAP
+🏗️ BIG-DIG-DEEP
 
-BIG-DIG-HEAP is a decentralized web archiving platform that enables users to capture, store, and retrieve high-fidelity snapshots of web content — powered by a Python backend and the Qortal decentralized network. Think archive.is meets decentralized storage: a resilient archive of web pages that lives on a peer-to-peer data network rather than centralized servers.
+BIG-DIG-DEEP is a decentralized web archiving platform that enables users to capture, store, and retrieve high-fidelity snapshots of web content — powered by a Python backend and the Qortal decentralized network. Think archive.is meets decentralized storage: a resilient archive of web pages that lives on a peer-to-peer data network rather than centralized servers.
 
 🚀 Overview
 
-BIG-DIG-HEAP lets you:
+BIG-DIG-DEEP lets you:
 
 📌 Submit live web URLs for archiving
 
@@ -20,7 +20,7 @@ BIG-DIG-HEAP lets you:
 
 🧠 Motivation
 
-The modern web is ephemeral. Pages disappear or change without notice, yet many contain content we want preserved. Traditional archival systems are centralized and depend on single entities. BIG-DIG-HEAP moves archiving into a decentralized realm, leveraging Qortal’s blockchain and distributed storage to make archives resilient, censorship-resistant, and verifiable.
+The modern web is ephemeral. Pages disappear or change without notice, yet many contain content we want preserved. Traditional archival systems are centralized and depend on single entities. BIG-DIG-DEEP moves archiving into a decentralized realm, leveraging Qortal’s blockchain and distributed storage to make archives resilient, censorship-resistant, and verifiable.
 
 📦 Features
 
@@ -44,7 +44,7 @@ The modern web is ephemeral. Pages disappear or change without notice, yet many 
 
 🧩 Architecture
 
-BIG-DIG-HEAP consists of:
+BIG-DIG-DEEP consists of:
 
 * Crawler Subsystem
   * A Python service (using Playwright) that:
@@ -96,10 +96,10 @@ cd qortal
 mvn clean package
 cd ..
 ``` -->
-  * Clone the big-dig-heap repo  
+  * Clone the big-dig-deep repo  
 ```
-git clone https://github.com/8bittengeek/big-dig-heap.git
-cd big-dig-heap
+git clone https://github.com/8bittengeek/big-dig-deep.git
+cd big-dig-deep
 ```
   <!-- * Get the Qortal core
 ```
@@ -107,7 +107,7 @@ cp ../qortal/target/qortal-5.0.6.jar ./
 ``` -->
   * Build a local image
 ```
-docker build -t qortal-bdh-image .
+docker build -t qortal-bdd-image .
 ```
   * Launch development environment
 ```
@@ -123,7 +123,7 @@ API docs: `http://localhost:8000/docs`
 
 ---
 
-📦 BIG-DIG-HEAP Docker Setup Overview
+📦 BIG-DIG-DEEP Docker Setup Overview
 
 This provides a consistent dev environment using containers so you can:
 
@@ -138,7 +138,7 @@ This provides a consistent dev environment using containers so you can:
 ⚠️ Important Note on Qortal Core:
 Qortal Core doesn’t currently publish an official Docker image; it’s designed to run as a Java application built from source. If you want a local node in Docker, you’ll need to build your own container image from the repo or use an external dev script to wrap it. 
 
-The composition below includes a placeholder qortal_node service that expects your own image (big-dig-heap‑image). You can replace it with your own custom build once available.
+The composition below includes a placeholder qortal_node service that expects your own image (big-dig-DEEP‑image). You can replace it with your own custom build once available.
 
 
 ```
@@ -201,7 +201,7 @@ This project is released under the MIT License — see [LICENSE.md](LICENSE.md) 
 
 🪙 Acknowledgements
 
-BIG-DIG-HEAP was inspired by open archival tools and decentralized storage innovations.
+BIG-DIG-DEEP was inspired by open archival tools and decentralized storage innovations.
 
 ---
 
@@ -220,7 +220,7 @@ wiki.qortal.org
 * Q-Apps API: JavaScript-based apps can interact with users and the blockchain through Qortal’s APIs, making it usable with modern front-ends. 
 Qortal
 
-* BIG-DIG-HEAP app consists of a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
+* BIG-DIG-DEEP app consists of a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
 
 ---
 
@@ -238,11 +238,11 @@ Wikipedia
 
 * ArchiveBox: Open-source tool for self-hosted web archiving and retrieval, can store HTML, JS, PDFs, screenshots, WARC files, media, etc. 
 
-These tools mix crawling logic (download, render, process content) with storage formats (HTML, WARC, screenshots) that BIG-DIG-HEAP needs to model or interface with.
+These tools mix crawling logic (download, render, process content) with storage formats (HTML, WARC, screenshots) that BIG-DIG-DEEP needs to model or interface with.
 
 ---
 
-🛠️ Architecture Outline for BIG-DIG-HEAP
+🛠️ Architecture Outline for BIG-DIG-DEEP
 
 🧱 1. Crawler & Archival Backend
 
@@ -260,13 +260,13 @@ These tools mix crawling logic (download, render, process content) with storage 
 
 * Stores metadata (timestamp, hashes, dependencies)
 
-* This is similar in intent to ArchiveBox but tailored to the needs of BIG-DIG-HEAP.
+* This is similar in intent to ArchiveBox but tailored to the needs of BIG-DIG-DEEP.
 
 ---
 
 📦 2. Chunking & Storage Module
 
-Because Qortal’s Data Network can store encrypted, chunked data, BIG-DIG-HEAP needs:
+Because Qortal’s Data Network can store encrypted, chunked data, BIG-DIG-DEEP needs:
 
 * A component to chunk archived data
 
@@ -292,7 +292,7 @@ Develop a Q-App (JavaScript with a modern UI framework like React or Svelte) tha
 
 * Fetches archived content using QDN’s decentralized fetch APIs
 
-The Q-App would interact with BIG-DIG-HEAP backend (crawler) and Qortal to coordinate storage and retrieval.
+The Q-App would interact with BIG-DIG-DEEP backend (crawler) and Qortal to coordinate storage and retrieval.
 
 ---
 
