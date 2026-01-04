@@ -24,7 +24,12 @@ import uuid
 import requests
 import logging
 import urllib
-from warcio.archiveiterator import WARCWriter
+import asyncio
+from playwright.async_api import async_playwright
+from warcio import WARCWriter
+from warcio import StatusAndHeaders
+import httpx  # Recommended for async HTTP requests
+from datetime import datetime, UTC
 
 OUTPUT="bwa_snap"
 os.makedirs(OUTPUT, exist_ok=True)
@@ -37,7 +42,34 @@ def fbasename(job):
     fn = job["url_hash"]["hex"]
     return fn
 
-def snapshot_warc(job,page):
+async def snapshot_warc(job,page):
+    """
+    Captures a webpage snapshot and saves it as a WARC (Web ARChive) file.
+    This function fetches the main page content and all associated resources,
+    then writes them to a WARC format file for archival purposes.
+    Args:
+        job: Job object containing metadata about the crawl job.
+        page: Playwright page object representing the webpage to capture.
+    Returns:
+        None
+    Raises:
+        Exception: Any unexpected errors during resource processing are logged
+                   and skipped without stopping execution.
+    Notes:
+        - The function captures the main HTML page and all resource entries
+          from the browser's performance API.
+        - Each resource is fetched with a 10-second timeout and validated
+          before being added to the WARC file.
+        - Invalid or failed resource fetches are logged as warnings/errors
+          but do not interrupt the overall archival process.
+        - Output file is saved to OUTPUT directory with .warc extension
+          based on the job filename.
+    Implementation Details:
+        - Uses WARCWriter to create WARC-compliant records
+        - Generates unique record IDs using UUID v4
+        - Includes HTTP User-Agent header for resource requests
+        - Validates URLs using urllib.parse.urlparse()
+    """
     # fetch the page contents
     page_content = await page.content()
 
@@ -120,23 +152,34 @@ def snapshot_warc(job,page):
             continue
 
     # Save WARC file
-    with open(f"{OUTPUT}/{fbasename(job)}.html", 'wb') as warc_file:
+    with open(f"{OUTPUT}/{fbasename(job)}.warc", 'wb') as warc_file:
         warc_file.write(output.getvalue())
         
 
-def snapshot_html(job,page):
-    html = page.content()
+async def snapshot(job):
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        
+        try:
+            await page.goto(job['url'])
+            await snapshot_warc(job, page)
+        finally:
+            await browser.close()
+
+async def snapshot_html(job,page):
+    html = await page.content()
     with open(f"{OUTPUT}/{fbasename(job)}.html", "w") as f:
         f.write(html)
 
-def snapshot_image(job,page):
-    page.screenshot(path=f"{OUTPUT}/{fbasename(job)}.png", full_page=True)
+async def snapshot_image(job,page):
+    await page.screenshot(path=f"{OUTPUT}/{fbasename(job)}.png", full_page=True)
 
-def snapshot_job(job):
+async def snapshot_job(job):
     with open(f"{OUTPUT}/{fbasename(job)}.json", "w") as f:
         f.write(json.dumps(job))
 
-def snapshot(job):
+async def _snapshot(job):
      url = job["url"]
      with sync_playwright() as pw:
         browser = pw.chromium.launch()
@@ -147,9 +190,30 @@ def snapshot(job):
         snapshot_job(job)
         snapshot_html(job,page)
         snapshot_image(job,page)
-        snapshot_warc(job,page)
+        await snapshot_warc(job,page)
         browser.close()
-    
+
+async def snapshot(job):
+    url = job["url"]
+    domain = urlparse(url).netloc
+    job["domain"] = domain
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        
+        try:
+            # Navigate to the URL
+            await page.goto(url)
+            
+            # snapshot logic follows
+            await snapshot_warc(job, page)
+            await snapshot_job(job)
+            await snapshot_html(job,page)
+            await snapshot_image(job,page)
+        
+        finally:
+            await browser.close()
+
 if __name__ == "__main__":
     job = args.data
-    snapshot(job)
+    asyncio.run(snapshot(job))
