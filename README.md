@@ -26,8 +26,8 @@ The modern web is ephemeral. Pages disappear or change without notice, yet many 
 
 * High-fidelity snapshots
   * Full page HTML
-  * Screenshots
-  * Optional WARC (standard archive format)
+  * Screenshots (.png)
+  * WARC (standard web archive format)
 
 * Decentralized storage
   * Manifest hashes on Qortal blockchain
