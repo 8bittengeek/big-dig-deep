@@ -42,7 +42,7 @@ def fbasename(job):
     fn = job["url_hash"]["hex"]
     return fn
 
-async def snapshot_warc(job,page):
+async def snapshot_warc(job,page,response):
     """
     Captures a webpage snapshot and saves it as a WARC (Web ARChive) file.
     This function fetches the main page content and all associated resources,
@@ -70,8 +70,14 @@ async def snapshot_warc(job,page):
         - Includes HTTP User-Agent header for resource requests
         - Validates URLs using urllib.parse.urlparse()
     """
+    logging.info(job)
     # fetch the page contents
     page_content = await page.content()
+
+    # Build full HTTP response
+    status_line = f"HTTP/1.1 {response.status} {response.status_text}"
+    headers_str = "\r\n".join(f"{k}: {v}" for k, v in response.headers.items())
+    full_response = f"{status_line}\r\n{headers_str}\r\n\r\n{page_content}"
 
     # Create WARC writer
     output = io.BytesIO()
@@ -93,11 +99,10 @@ async def snapshot_warc(job,page):
     record = writer.create_warc_record(
         page.url,
         'response',
-        payload=io.BytesIO(page_content.encode('utf-8')),
+        payload=io.BytesIO(full_response.encode('utf-8')),
         warc_headers_dict={
             'WARC-Record-ID': record_id,
-            'WARC-Date': datetime.datetime.utcnow().isoformat(),
-            'Content-Type': 'text/html'
+            'WARC-Date': datetime.now(UTC).isoformat()
         }
     )
     writer.write_record(record)
@@ -128,6 +133,11 @@ async def snapshot_warc(job,page):
                 # Check for successful response
                 resource_response.raise_for_status()
                 
+                # Build full HTTP response
+                status_line = f"HTTP/1.1 {resource_response.status_code} {resource_response.reason}"
+                headers_str = "\r\n".join(f"{k}: {v}" for k, v in resource_response.headers.items())
+                full_response = f"{status_line}\r\n{headers_str}\r\n\r\n".encode('utf-8') + resource_response.content
+                
             except requests.RequestException as e:
                 logging.error(f"Failed to fetch resource {resource['url']}: {e}")
                 continue
@@ -135,12 +145,11 @@ async def snapshot_warc(job,page):
             # Create WARC record for the resource
             resource_record = writer.create_warc_record(
                 resource['url'],
-                'resource',
-                payload=io.BytesIO(resource_response.content),
+                'response',
+                payload=io.BytesIO(full_response),
                 warc_headers_dict={
                     'WARC-Record-ID': f'<urn:uuid:{uuid.uuid4()}>',
-                    'WARC-Date': datetime.datetime.utcnow().isoformat(),
-                    'Content-Type': resource_response.headers.get('Content-Type', 'application/octet-stream')
+                    'WARC-Date': datetime.now(UTC).isoformat()
                 }
             )
             
@@ -152,7 +161,9 @@ async def snapshot_warc(job,page):
             continue
 
     # Save WARC file
-    with open(f"{OUTPUT}/{fbasename(job)}.warc", 'wb') as warc_file:
+    filepath = f"{OUTPUT}/{fbasename(job)}.warc"
+    logging.info(filepath)
+    with open(filepath, 'wb') as warc_file:
         warc_file.write(output.getvalue())
         
 
@@ -203,10 +214,10 @@ async def snapshot(job):
         
         try:
             # Navigate to the URL
-            await page.goto(url)
+            response = await page.goto(url)
             
             # snapshot logic follows
-            await snapshot_warc(job, page)
+            await snapshot_warc(job, page, response)
             await snapshot_job(job)
             await snapshot_html(job,page)
             await snapshot_image(job,page)
