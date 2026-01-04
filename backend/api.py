@@ -12,6 +12,7 @@
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from urllib.parse import urlparse
 
 import uuid
 import subprocess
@@ -51,7 +52,11 @@ def url_hash(url, salt=None):
 @app.post("/archive")
 def queue_archive(req: ArchiveRequest):
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {"job_id": job_id, "status": "queued", "url": req.url, "url_hash": url_hash(req.url)}
+    jobs[job_id] = {"job_id":   job_id, 
+                    "status":   "queued", 
+                    "url":      req.url, 
+                    "url_hash": url_hash(req.url),
+                    "domain":   urlparse(req.url).netloc}
     crawler_data = json.dumps(jobs[job_id]) 
     print(crawler_data)
     try:

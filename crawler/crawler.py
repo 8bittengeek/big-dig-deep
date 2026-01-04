@@ -10,24 +10,15 @@
 #                                                                               *
 #*******************************************************************************/
 
-from playwright.sync_api import sync_playwright
-from urllib.parse import urlparse
-
 import os
 import io
-import sys
 import argparse
 import json
 import asyncio
 import datetime
-import uuid
-import requests
-import logging
-import urllib
 import asyncio
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
-from playwright.sync_api import sync_playwright
 from playwright.async_api import async_playwright
 
 OUTPUT="bwa_warc"
@@ -151,8 +142,6 @@ def snapshot_job(job):
 
 async def snapshot(job):
     url = job["url"]
-    domain = urlparse(url).netloc
-    job["domain"] = domain
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         page = await browser.new_page()
