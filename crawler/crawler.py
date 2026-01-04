@@ -25,158 +25,117 @@ import requests
 import logging
 import urllib
 import asyncio
-from playwright.async_api import async_playwright
-from warcio import WARCWriter
-from warcio import StatusAndHeaders
-import httpx  # Recommended for async HTTP requests
+from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
+from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
-OUTPUT="bwa_snap"
+OUTPUT="bwa_warc"
 os.makedirs(OUTPUT, exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=json.loads)
 args = parser.parse_args()
 
+
 def fbasename(job):
     fn = job["url_hash"]["hex"]
     return fn
 
-async def snapshot_warc(job,page,response):
+async def crawl_url_to_warc_object_async(url: str, timeout: int = 30000, user_agent: str = None):
     """
-    Captures a webpage snapshot and saves it as a WARC (Web ARChive) file.
-    This function fetches the main page content and all associated resources,
-    then writes them to a WARC format file for archival purposes.
-    Args:
-        job: Job object containing metadata about the crawl job.
-        page: Playwright page object representing the webpage to capture.
-    Returns:
-        None
-    Raises:
-        Exception: Any unexpected errors during resource processing are logged
-                   and skipped without stopping execution.
-    Notes:
-        - The function captures the main HTML page and all resource entries
-          from the browser's performance API.
-        - Each resource is fetched with a 10-second timeout and validated
-          before being added to the WARC file.
-        - Invalid or failed resource fetches are logged as warnings/errors
-          but do not interrupt the overall archival process.
-        - Output file is saved to OUTPUT directory with .warc extension
-          based on the job filename.
-    Implementation Details:
-        - Uses WARCWriter to create WARC-compliant records
-        - Generates unique record IDs using UUID v4
-        - Includes HTTP User-Agent header for resource requests
-        - Validates URLs using urllib.parse.urlparse()
+    Crawl a URL using Playwright's async API, record HAR, then convert that HAR
+    into a WARC object in memory, ready to be written to a .warc.gz file.
+
+    :param url: target URL
+    :param timeout: max navigation timeout (ms)
+    :param user_agent: optional user agent
+    :return: an in-memory BufferWARCWriter
     """
-    logging.info(job)
-    # fetch the page contents
-    page_content = await page.content()
 
-    # Build full HTTP response
-    status_line = f"HTTP/1.1 {response.status} {response.status_text}"
-    headers_str = "\r\n".join(f"{k}: {v}" for k, v in response.headers.items())
-    full_response = f"{status_line}\r\n{headers_str}\r\n\r\n{page_content}"
+    har_path = "temp_capture.har"
 
-    # Create WARC writer
-    output = io.BytesIO()
-    writer = WARCWriter(output, logging=True)
+    # 1) Run Playwright async and record HAR
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context_args = {"record_har_path": har_path}
+        if user_agent:
+            context_args["user_agent"] = user_agent
 
-    # Capture full page resources
-    resources = await page.evaluate("""() => {
-        return performance.getEntriesByType('resource')
-            .map(resource => ({
-                url: resource.name,
-                type: resource.initiatorType
-            }));
-    }""")
+        context = await browser.new_context(**context_args)
+        page = await context.new_page()
 
-   # Generate unique WARC record ID
-    record_id = f'<urn:uuid:{uuid.uuid4()}>'
-    
-    # Write main page record
-    record = writer.create_warc_record(
-        page.url,
-        'response',
-        payload=io.BytesIO(full_response.encode('utf-8')),
-        warc_headers_dict={
-            'WARC-Record-ID': record_id,
-            'WARC-Date': datetime.now(UTC).isoformat()
-        }
-    )
-    writer.write_record(record)
-    
-    # Capture additional resources
-    for resource in resources:
+        await page.goto(url, timeout=timeout)
         try:
-            # Skip empty or invalid URLs
-            if not resource.get('url'):
-                continue
-            
-            # Validate URL
-            parsed_url = urllib.parse.urlparse(resource['url'])
-            if not parsed_url.scheme or not parsed_url.netloc:
-                logging.warning(f"Invalid URL: {resource['url']}")
-                continue
-            
-            # Fetch resource content with timeout and error handling
-            try:
-                resource_response = requests.get(
-                    resource['url'], 
-                    timeout=10,  # 10-second timeout
-                    headers={
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    }
-                )
-                
-                # Check for successful response
-                resource_response.raise_for_status()
-                
-                # Build full HTTP response
-                status_line = f"HTTP/1.1 {resource_response.status_code} {resource_response.reason}"
-                headers_str = "\r\n".join(f"{k}: {v}" for k, v in resource_response.headers.items())
-                full_response = f"{status_line}\r\n{headers_str}\r\n\r\n".encode('utf-8') + resource_response.content
-                
-            except requests.RequestException as e:
-                logging.error(f"Failed to fetch resource {resource['url']}: {e}")
-                continue
-            
-            # Create WARC record for the resource
-            resource_record = writer.create_warc_record(
-                resource['url'],
-                'response',
-                payload=io.BytesIO(full_response),
-                warc_headers_dict={
-                    'WARC-Record-ID': f'<urn:uuid:{uuid.uuid4()}>',
-                    'WARC-Date': datetime.now(UTC).isoformat()
-                }
-            )
-            
-            # Write the resource record to WARC
-            writer.write_record(resource_record)
-        
-        except Exception as e:
-            logging.error(f"Unexpected error processing resource {resource}: {e}")
+            await page.wait_for_load_state("networkidle", timeout=timeout)
+        except Exception:
+            pass  # Ignore timeout, HAR may still be recorded
+
+        await context.close()
+        await browser.close()
+
+    # 2) Load the HAR JSON
+    if not os.path.exists(har_path):
+        raise Exception(f"HAR file {har_path} not created, possibly due to navigation failure")
+    with open(har_path, "r", encoding="utf-8") as f:
+        har_data = json.load(f)
+
+    # 3) Prepare an in-memory WARC writer
+    warc_buffer = io.BytesIO()
+    warc_writer = WARCWriter(warc_buffer, gzip=True)
+
+    # 4) Convert HAR entries into WARC response records
+    for entry in har_data.get("log", {}).get("entries", []):
+        request = entry.get("request", {})
+        response = entry.get("response", {})
+
+        if not request.get("url"):
             continue
 
-    # Save WARC file
-    filepath = f"{OUTPUT}/{fbasename(job)}.warc"
-    logging.info(filepath)
-    with open(filepath, 'wb') as warc_file:
-        warc_file.write(output.getvalue())
-        
+        # Skip entries missing response content
+        content_info = response.get("content")
+        if content_info is None:
+            continue
 
-async def snapshot(job):
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch()
-        page = await browser.new_page()
-        
-        try:
-            await page.goto(job['url'])
-            await snapshot_warc(job, page)
-        finally:
-            await browser.close()
+        res_headers = [(h["name"], h["value"]) for h in response.get("headers", [])]
+
+        # Build HTTP status line for WARC
+        status_line = f"{response.get('status', '')} {response.get('statusText', '')}"
+
+        http_headers = StatusAndHeaders(
+            status_line,
+            res_headers,
+            protocol="HTTP/1.1"
+        )
+
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Convert the response body text into bytes
+        body_text = content_info.get("text") or ""
+        if content_info.get("encoding") == "base64":
+            import base64
+            body_bytes = base64.b64decode(body_text)
+        else:
+            body_bytes = body_text.encode("utf-8", errors="ignore")
+
+        warc_record = warc_writer.create_warc_record(
+            uri=request.get("url"),
+            record_type="response",
+            payload=io.BytesIO(body_bytes),
+            http_headers=http_headers,
+            warc_headers_dict={'WARC-Date': timestamp}
+        )
+
+        warc_writer.write_record(warc_record)
+
+    warc_buffer.seek(0)
+    os.remove(har_path)
+    return warc_buffer
+
+async def snapshot_warc(job,page):
+    warc_buffer = await crawl_url_to_warc_object_async(page.url)
+    with open(f"{OUTPUT}/{fbasename(job)}.warc.gz", "wb") as f:
+        f.write(warc_buffer.getvalue())
 
 async def snapshot_html(job,page):
     html = await page.content()
@@ -186,23 +145,9 @@ async def snapshot_html(job,page):
 async def snapshot_image(job,page):
     await page.screenshot(path=f"{OUTPUT}/{fbasename(job)}.png", full_page=True)
 
-async def snapshot_job(job):
+def snapshot_job(job):
     with open(f"{OUTPUT}/{fbasename(job)}.json", "w") as f:
         f.write(json.dumps(job))
-
-async def _snapshot(job):
-     url = job["url"]
-     with sync_playwright() as pw:
-        browser = pw.chromium.launch()
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle")
-        domain = urlparse(url).netloc
-        job["domain"] = domain
-        snapshot_job(job)
-        snapshot_html(job,page)
-        snapshot_image(job,page)
-        await snapshot_warc(job,page)
-        browser.close()
 
 async def snapshot(job):
     url = job["url"]
@@ -214,11 +159,11 @@ async def snapshot(job):
         
         try:
             # Navigate to the URL
-            response = await page.goto(url)
+            await page.goto(url)
             
             # snapshot logic follows
-            await snapshot_warc(job, page, response)
-            await snapshot_job(job)
+            await snapshot_warc(job, page)
+            snapshot_job(job)
             await snapshot_html(job,page)
             await snapshot_image(job,page)
         
