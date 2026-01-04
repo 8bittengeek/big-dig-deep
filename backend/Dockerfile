@@ -9,6 +9,7 @@ COPY backend/requirements.txt .
 # Install Python deps, including playwright
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
+    pip install warcio httpx && \
     python -m playwright install
 
 # Copy code after installing deps
