@@ -272,9 +272,9 @@ BIG-WEB-ARCHIVE was inspired by open archival tools and diligent archivists ever
 
 📈 Development Technologies
 
-| Component	| Suggested Stack |
-| --------- | --------------- |
-| Crawler / Scraper	Puppeteer/Playwright (JS) or Headless Chrome / Chrome DevTools Protocol
+| Component	| Stack |
+| --------- | --------- |
+| Crawler/Scraper	| Playwright |
 | Backend API |	Python (FastAPI) |
 | Archival Storage Format | WARC, HTML Bundles, PDF, Screenshots |
 | Q-App Frontend | JavaScript + React / Svelte, Q-Apps API |
