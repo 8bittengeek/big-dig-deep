@@ -233,11 +233,8 @@ BIG-WEB-ARCHIVE was inspired by open archival tools and diligent archivists ever
 
 * What Qortal Provides
   * Blockchain + Data Network (QDN): Qortal’s QDN lets you store encrypted, chunked data in a peer-to-peer network secured by the blockchain. 
-Qortal
   * Publishing Websites & Apps: Qortal supports publishing websites and apps (Q-Apps) that are hosted decentralized, fee-less and indefinitely. 
-wiki.qortal.org
   * Q-Apps API: JavaScript-based apps can interact with users and the blockchain through Qortal’s APIs, making it usable with modern front-ends. 
-Qortal
   * BIG-WEB-ARCHIVE app consists of a crawler running on backend servers to fetch and snapshot web content, plus a Q-App frontend that interacts with Qortal for storage, retrieval, and distribution.
 
 ---
