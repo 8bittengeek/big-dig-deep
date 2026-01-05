@@ -275,11 +275,10 @@ BIG-WEB-ARCHIVE was inspired by open archival tools and diligent archivists ever
 | Component	| Suggested Stack |
 | --------- | --------------- |
 | Crawler / Scraper	Puppeteer/Playwright (JS) or Headless Chrome / Chrome DevTools Protocol
-| Backend API |	Python (FastAPI), Go, or Rust (Actix/Hyper) |
+| Backend API |	Python (FastAPI) |
 | Archival Storage Format | WARC, HTML Bundles, PDF, Screenshots |
 | Q-App Frontend | JavaScript + React / Svelte, Q-Apps API |
-| Deployment | Docker / Kubernetes for crawler service |
-
+| Deployment | Docker for crawler service |
 
 ---
 
