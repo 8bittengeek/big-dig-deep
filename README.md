@@ -274,7 +274,7 @@ BIG-WEB-ARCHIVE was inspired by open archival tools and diligent archivists ever
 
 | Component	| Stack |
 | --------- | --------- |
-| Crawler/Scraper	| Playwright |
+| Crawler/Scraper	| Python / asyncio / warcio / Playwright |
 | Backend API |	Python (FastAPI) |
 | Archival Storage Format | WARC, HTML Bundles, PDF, Screenshots |
 | Q-App Frontend | JavaScript + React / Svelte, Q-Apps API |
