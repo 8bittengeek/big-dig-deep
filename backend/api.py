@@ -16,7 +16,6 @@ from urllib.parse import urlparse
 
 import uuid
 import subprocess
-import os
 import logging
 import json
 import hashlib
@@ -58,7 +57,7 @@ def queue_archive(req: ArchiveRequest):
                     "url_hash": url_hash(req.url),
                     "domain":   urlparse(req.url).netloc}
     crawler_data = json.dumps(jobs[job_id]) 
-    print(crawler_data)
+    logging.info(crawler_data)
     try:
         logging.info(crawler_data)
         subprocess.Popen(["python", "crawler/crawler.py", "--data", crawler_data])
