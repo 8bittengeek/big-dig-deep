@@ -145,7 +145,7 @@ The composition below includes a placeholder qortal_node service that expects yo
   ├── index.html
   ├── app.js
   ├── styles.css
-  ├── q-app.json
+  ├── qapp.json
   └── Dockerfile
 ├─ docker-compose.yml
 ├─ Dockerfile
@@ -173,6 +173,39 @@ curl http://localhost:8000/archive/<JOB_ID>
   * Archive manifest is generated and hashes computed.
   * Manifest uploaded to QDN; hashes committed to Qortal blockchain.
   * Snapshots can be retrieved via the Q-App or direct fetch from QDN.
+
+
+---
+
+* Big Web Archive - UI
+  * Submit new crawl/archive jobs
+  * Show job queue + status
+  * Surface archive results (hashes, QDN refs later)
+  * Feel trustworthy, technical, not “Web2 glossy”
+
+┌──────────────────────────────┐
+│ Big Web Archive              │
+│ Identity: <Qortal name>      │
+├──────────────────────────────┤
+│ [ New Crawl Job ]            │
+│  URL: [___________________]  │
+│  Depth: [ 1 ▼ ]              │
+│  Media: [✓] HTML [✓] Assets  │
+│  [ Submit Job ]              │
+├──────────────────────────────┤
+│ Active / Recent Jobs         │
+│ ┌──────────────────────────┐ │
+│ │ job_id  status  progress │ │
+│ │ job_id  done    100%     │ │
+│ └──────────────────────────┘ │
+├──────────────────────────────┤
+│ Job Output / Logs            │
+│ ┌──────────────────────────┐ │
+│ │ crawler stdout / results │ │
+│ └──────────────────────────┘ │
+└──────────────────────────────┘
+
+---
 
 * Contributions are welcome! Feel free to:
   * Improve crawler fidelity

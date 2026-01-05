@@ -68,7 +68,14 @@ def queue_archive(req: ArchiveRequest):
     return jobs[job_id]
 
 @app.get("/archive/{job_id}")
-def get_status(job_id: str):
+def get_job(job_id: str):
     if job_id not in jobs:
         raise HTTPException(404, "Job not found")
     return jobs[job_id]
+
+@app.get_jobs("/archives/")
+def get_jobs(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(404, "Job not found")
+    return jobs
+
