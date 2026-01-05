@@ -183,6 +183,7 @@ curl http://localhost:8000/archive/<JOB_ID>
   * Surface archive results (hashes, QDN refs later)
   * Feel trustworthy, technical, not “Web2 glossy”
 
+```
 ┌──────────────────────────────┐
 │ Big Web Archive              │
 │ Identity: <Qortal name>      │
@@ -204,6 +205,7 @@ curl http://localhost:8000/archive/<JOB_ID>
 │ │ crawler stdout / results │ │
 │ └──────────────────────────┘ │
 └──────────────────────────────┘
+```
 
 ---
 
