@@ -1,22 +1,15 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"/><title>Big-Web-Archive Q-App</title></head>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Big Web Archive</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
 <body>
-<h1>Big-Web-Archive Q-App</h1>
-<form id="archiveForm">
-  <input id="urlInput" placeholder="URL to archive" size="40"/>
-  <button>Archive!</button>
-</form>
-<pre id="output"></pre>
-<script>
-  document.getElementById("archiveForm").onsubmit = async e => {
-    e.preventDefault();
-    const url = urlInput.value;
-    document.getElementById("output").textContent = "Sending…";
-    const res = await fetch("/archive", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({url})
-    });
-    document.getElementById("output").textContent = JSON.stringify(await res.json(),null,2);
-  };
-</script>
-</body></html>
+  <h1>Big Web Archive</h1>
+  <button id="identityBtn">Load Identity</button>
+  <pre id="output"></pre>
+
+  <script src="app.js"></script>
+</body>
+</html>

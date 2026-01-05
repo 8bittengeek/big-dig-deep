@@ -135,11 +135,22 @@ The composition below includes a placeholder qortal_node service that expects yo
 📁 Project Structure
 /
 ├─ backend/        # FastAPI REST API
+  ├── api.py
+  └── Dockerfile
 ├─ crawler/        # Python snapshot & crawler logic
+  └── crawler.py
 ├─ qortal/         # Bridge to Qortal publishing
+  └── bridge.py
 ├─ qapp/           # Q-App frontend
+  ├── index.html
+  ├── app.js
+  ├── styles.css
+  ├── q-app.json
+  └── Dockerfile
 ├─ docker-compose.yml
-├─ README.md
+├─ Dockerfile
+├─ LIENSE.md
+└─ README.md
 ```
 
 🧪 Usage Examples
