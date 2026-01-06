@@ -1,6 +1,4 @@
-
 services:
-
   backend:
     build:
       context: .
@@ -11,26 +9,6 @@ services:
       - ./crawler:/app/crawler
     ports:
       - "8000:8000"
-    depends_on:
-      - qortal_node
-
-  qapp:
-    build:
-      context: .
-      dockerfile: qapp/Dockerfile
-    container_name: archive-qapp
-    ports:
-      - "8080:80"
-
-  qortal_node:
-    image: qortal-bdd-image
-    container_name: qortal-bdd
-    volumes:
-      - qortal-data:/qortal/data
-    ports:
-      - "62391:62391"
     environment:
-      - JAVA_OPTS=-Xmx512m
-
-volumes:
-  qortal-data:
+      # point backend to native Qortal API on host
+      - QORTAL_API_URL=http://host.docker.internal:62392
