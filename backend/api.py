@@ -13,6 +13,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from urllib.parse import urlparse
+from fastapi.middleware.cors import CORSMiddleware
 
 import uuid
 import subprocess
@@ -22,6 +23,13 @@ import hashlib
 import base64
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 jobs = {}
 
 class ArchiveRequest(BaseModel):
