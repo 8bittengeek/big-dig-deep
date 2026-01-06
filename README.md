@@ -130,18 +130,18 @@ API docs: `http://localhost:8000/docs`
 📁 Project Structure
 /
 ├─ backend/        # FastAPI REST API
-│ ├── api.py
-│ └── Dockerfile
+├──── api.py
+└──── Dockerfile
 ├─ crawler/        # Python snapshot & crawler logic
-│ └── crawler.py
+└──── crawler.py
 ├─ qortal/         # Bridge to Qortal publishing
-│ └── bridge.py
+└──── bridge.py     
 ├─ qapp/           # Q-App frontend
-│ ├── index.html
-│ ├── app.js
-│ ├── styles.css
-│ ├── qapp.json
-│ └── Dockerfile
+├──── index.html   
+├──── app.js       
+├──── styles.css  
+├──── qapp.json    
+└──── Dockerfile
 ├─ docker-compose.yml
 ├─ Dockerfile
 ├─ LIENSE.md
