@@ -11,14 +11,25 @@
 #*******************************************************************************/
 
 # Qortal build container
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:11-jdk
 
-WORKDIR /qortal-bdd
+WORKDIR /qortal
+COPY assets/qortal.jar /qortal/qortal.jar
+COPY assets/qortal-testnet-settings.json /qortal/settings.json
+COPY assets/testchain.json /qortal/testchain.json
 
-# Copy your built Qortal core jar + settings
-COPY assets/qortal.jar /qortal-bdd/qortal.jar
-COPY assets/qortal-testnet-settings.json /qortal-bdd/settings.json
-COPY assets/testchain.json /qortal-bdd/testchain.json
+RUN mkdir -p /qortal/db-testnet /qortal/data /qortal/tmp \
+    && chmod -R 777 /qortal
 
-# EXPOSE 62392  # API port
-CMD ["java", "-jar", "/qortal-bdd/qortal.jar", "settings.json"]
+EXPOSE 62388  # Hub
+EXPOSE 62391  # P2P
+EXPOSE 62392  # API
+
+CMD ["java",
+     "-Djava.awt.headless=true",
+     "-Djava.security.egd=file:/dev/./urandom",
+     "-XX:MetaspaceSize=256m",
+     "-XX:MaxMetaspaceSize=1g",
+     "-jar", "/qortal/qortal.jar",
+     "/qortal/settings.json"]
+     
