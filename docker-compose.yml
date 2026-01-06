@@ -1,23 +1,4 @@
 services:
-
-  qortal_node:
-    image: qortal-bwa-image
-    container_name: qortal-bwa
-    volumes:
-      - qortal-data:/qortal/data
-      - qortal-db:/qortal/db-testnet
-    ports:
-      - "62388:62388"   # Hub
-      - "62392:62392"   # API
-      - "62391:62391"   # P2P
-    environment:
-      - JAVA_OPTS=-Xmx512m
-    working_dir: /qortal
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:62392/admin/info"]
-      interval: 10s
-      retries: 5
-
   backend:
     build:
       context: .
@@ -28,9 +9,6 @@ services:
       - ./crawler:/app/crawler
     ports:
       - "8000:8000"
-    depends_on:
-      - qortal_node
-
-volumes:
-  qortal-data:
-  qortal-db:
+    environment:
+      # point backend to native Qortal API on host
+      - QORTAL_API_URL=http://host.docker.internal:62392

@@ -27,21 +27,21 @@ jobs = {}
 class ArchiveRequest(BaseModel):
     url: str
 
+def normalize_url(url: str) -> str:
+    parsed = urlparse(url)
+    if not parsed.scheme:
+        return "http://" + url
+    return url
+
 def url_hash(url, salt=None):
-    # Normalize URL string
-    normalized_url = url.lower().strip()
-    
     # Create base hash
-    base_hash = hashlib.sha256(normalized_url.encode('utf-8')).digest()
-    
+    base_hash = hashlib.sha256(url.encode('utf-8')).digest()
     # Add optional salt
     if salt:
         base_hash = hashlib.sha256(base_hash + salt.encode('utf-8')).digest()
-    
     # Create multiple representations
     hex_hash = base_hash.hex()
     base64_hash = base64.urlsafe_b64encode(base_hash).decode('utf-8')
-    
     return {
         'hex': hex_hash,
         'base64': base64_hash,
@@ -50,6 +50,8 @@ def url_hash(url, salt=None):
 
 @app.post("/archive")
 def queue_archive(req: ArchiveRequest):
+    # Normalize URL string
+    req.url = normalize_url(req.url)
     job_id = str(uuid.uuid4())
     jobs[job_id] = {"job_id":   job_id, 
                     "status":   "queued", 

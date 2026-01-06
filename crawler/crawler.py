@@ -27,7 +27,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=json.loads)
 args = parser.parse_args()
 
-
 def fbasename(job):
     fn = job["url_hash"]["hex"]
     return fn
