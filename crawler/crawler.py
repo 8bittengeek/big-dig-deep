@@ -28,6 +28,18 @@ parser.add_argument('--data', type=json.loads)
 args = parser.parse_args()
 
 def fbasename(job):
+    """
+    Extract the filename from a job's URL hash.
+
+    This function serves as a convenience accessor to retrieve the hexadecimal
+    representation of a URL's hash value from a job object. The hash is used as
+    a filename to uniquely identify and store archived web resources based on
+    their source URL, ensuring consistent naming across the crawler system.
+
+    :job: (dict) A job dictionary containing a 'url_hash' key with a 'hex' field.
+
+    :return: str: The hexadecimal hash string to be used as a filename.
+    """
     fn = job["url_hash"]["hex"]
     return fn
 
@@ -160,3 +172,4 @@ async def snapshot(job):
 if __name__ == "__main__":
     job = args.data
     asyncio.run(snapshot(job))
+    print()
