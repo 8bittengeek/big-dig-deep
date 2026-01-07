@@ -204,6 +204,110 @@ curl http://localhost:8000/archive/<JOB_ID>
 
 ---
 
+* QDN - Qortal Data Network
+  * Use ZIP as the atomic QDN object
+    * QDN treats ZIPs as first-class, immutable bundles
+    * Keeps WARC + metadata inseparable
+    * Simplifies signing, publishing, and discovery
+    * Matches “per-job snapshot” model cleanly
+
+Each crawl job → one ZIP → one QDN publish
+
+---
+
+* ZIP layout 
+
+```
+archive.zip
+├── warc/
+│   └── crawl.warc.gz
+├── metadata/
+│   ├── crawl.log
+│   ├── snapshot.png
+│   └── snapshot.html
+├── manifest.json
+```
+
+* Manifest
+  * History chaining
+  * Change detection 
+  * Deduplication before insertion
+  * External indexing after the fact
+
+```
+{
+  "schema": "big-web-archive/v1",
+  "target_url": "https://example.com",
+  "domain": "example.com",
+  "crawl_depth": 2,
+  "timestamp": "2026-01-07T03:14:15Z",
+  "content_hash": "sha256:abcd1234...",
+  "previous_hash": "sha256:prev5678...",
+  "warc": "warc/crawl.warc.gz",
+  "artifacts": {
+    "log": "metadata/crawl.log",
+    "html": "metadata/snapshot.html",
+    "png": "metadata/snapshot.png"
+  }
+}
+```
+
+* Deduplication strategy
+  * After crawl completes:
+    * Hash normalized WARC
+  * Fetch latest published manifest for this URL
+  * Compare hashes:
+    * Equal → do not publish
+    * Different → publish new ZIP with `previous_hash`
+  
+No QDN overwrite required. Pure append-only.
+
+---
+
+* Publishing flow (Hub-signed, UI-driven)
+  * Backend responsibilities
+    * Crawl
+    * Generate WARC + metadata
+    * Build ZIP
+    * Compute hash
+    * Expose ZIP + manifest to Q-App
+  * Q-App responsibilities
+    * User clicks “Publish”
+      * Q-App calls Hub API:
+        * Signs data
+        * Publishes ZIP to QDN
+      * UI shows progress:
+        * “Preparing”
+        * “Signing”
+        * “Publishing”
+        * “Confirmed”
+
+```mermaid
+flowchart LR
+    A[Crawler<br/>WARC + Metadata] --> B[ZIP Builder<br/>Bundle Artifacts]
+    B --> C[Q-App<br/>User Interface]
+    C --> D[Qortal Hub<br/>Sign & Publish]
+    D --> E[QDN<br/>Public Immutable Storage]
+
+```
+
+No backend private keys. No trust issues.
+
+---
+
+* Discovery model (future-proof)
+  
+* Later, anyone can:
+  * Search QDN for:
+    * schema=big-web-archive/v1
+    * domain=example.com
+  * Walk previous_hash backward
+  * Reconstruct page history
+
+You are effectively building a distributed Wayback Machine.
+
+---
+
 * Contributions are welcome! Feel free to:
   * Improve crawler fidelity
   * Add search or indexing
