@@ -56,34 +56,34 @@ def url_hash(url, salt=None):
         'length': len(hex_hash)
     }
 
-@app.post("/archive")
+@app.post("/job")
 def queue_archive(req: ArchiveRequest):
     # Normalize URL string
     req.url = normalize_url(req.url)
-    job_id = str(uuid.uuid4())
-    jobs[job_id] = {"job_id":   job_id, 
+    id = str(uuid.uuid4())
+    jobs[id] = {"id":   id, 
                     "status":   "queued", 
                     "url":      req.url, 
                     "url_hash": url_hash(req.url),
                     "domain":   urlparse(req.url).netloc}
-    crawler_data = json.dumps(jobs[job_id]) 
+    crawler_data = json.dumps(jobs[id]) 
     logging.info(crawler_data)
     try:
         logging.info(crawler_data)
         subprocess.Popen(["python", "crawler/crawler.py", "--data", crawler_data])
-        jobs[job_id]["status"] = "started"
+        jobs[id]["status"] = "started"
     except subprocess.SubprocessError as e:
         logging.error(f"Subprocess failed: {e}")
-        jobs[job_id]["status"] = "failed"
-    return jobs[job_id]
+        jobs[id]["status"] = "failed"
+    return jobs[id]
 
-@app.get("/archive/{job_id}")
-def get_job(job_id: str):
-    if job_id not in jobs:
+@app.get("/job/{id}")
+def get_job(id: str):
+    if id not in jobs:
         raise HTTPException(404, "Job not found")
-    return jobs[job_id]
+    return jobs[id]
 
-@app.get("/archives")
+@app.get("/jobs")
 def get_jobs():
     return jobs
 

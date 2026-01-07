@@ -1,6 +1,7 @@
 {
   "name": "Big Web Archive",
-  "description": "Distributed web archiving on Qortal",
-  "version": "0.1.0",
-  "category": "Utilities"
+  "version": "1.0.0",
+  "main": "index.html",
+  "description": "Archive crawler front-end",
+  "author": "Mike"
 }
