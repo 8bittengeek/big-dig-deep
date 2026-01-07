@@ -1,0 +1,37 @@
+{
+  "listenPort": 62392,
+  "apiPort": 62391,
+  "bindAddress": "0.0.0.0",
+  "isTestNet": true,
+  "singleNodeTestnet": true,
+  "minBlockchainPeers": 0,
+  "allowConnections": false,
+  "bootstrap": true,
+  "uiEnabled": false,
+  "minPeerVersion": "4.5.2",
+  "allowConnectionsWithOlderPeerVersions": false,
+  "bitcoinNet": "TEST3",
+  "litecoinNet": "TEST3",
+  "dogecoinNet": "TEST3",
+  "digibyteNet": "TEST3",
+  "ravencoinNet": "TEST3",
+  "repositoryPath": "db-testnet",
+  "blockchainConfig": "testchain.json",
+  "apiDocumentationEnabled": true,
+  "apiRestricted": false,
+  "maxPeerConnectionTime": 999999999,
+  "localAuthBypassEnabled": true,
+  "recoveryModeTimeout": 0,
+  "uiLocalServers": [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0/0",
+    "::/0"
+  ],
+  "apiWhitelist": [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0/0",
+    "::/0"
+  ]
+}
