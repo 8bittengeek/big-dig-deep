@@ -304,7 +304,7 @@ No backend private keys. No trust issues.
   * Walk previous_hash backward
   * Reconstruct page history
 
-You are effectively building a distributed Wayback Machine.
+Effectively a distributed Wayback Machine.
 
 ---
 
