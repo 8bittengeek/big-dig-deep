@@ -315,10 +315,9 @@ Effectively a distributed Wayback Machine.
 ```
 crawler/
 ├── __init__.py
-├── crawl.py
-├── warc.py
-├── snapshot.py
-└── progress.py
+├── bwa_crawl.py
+├── bwa_snapshot.py
+└── bwa_progress.py
 ```
 
 * Examble Job Response Body

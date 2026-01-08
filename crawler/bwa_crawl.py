@@ -25,9 +25,6 @@ class bwa_crawl:
         self.basedir = basedir
         self.basename = job["url_hash"]["hex"]
 
-    def dirpath(self, job):
-        return os.path.join(self.basedir, job["id"])
-
     async def url_to_warc(url: str, timeout: int = 30000, user_agent: str = None):
         """
         Crawl a URL using Playwright's async API, record HAR, then convert that HAR
@@ -121,7 +118,7 @@ class bwa_crawl:
     async def run(self, job):
         snapshot = bwa_snapshot(job,self.dirpath)
         url = job["url"]
-        async with async_playwright() as pw:
+        async with self.async_playwright() as pw:
             browser = await pw.chromium.launch()
             page = await browser.new_page()
             
@@ -129,13 +126,14 @@ class bwa_crawl:
                 # Navigate to the URL
                 await page.goto(url)
                 
-                # snapshot logic follows
+                # fetch the warc object representation of the page
                 warc = self.warc(page.url)
-                await snapshot.warc(warc)
 
-                snapshot_job(job)
-                await snapshot_html(job,page)
-                await snapshot_image(job,page)
+                # perform the capture to storage.
+                await snapshot.warc(warc)
+                await snapshot.html(page)
+                await snapshot.image(page)
+                snapshot.job(job)
             
             finally:
                 await browser.close()

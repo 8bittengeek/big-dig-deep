@@ -74,10 +74,7 @@ class bwa_snapshot:
             logging.error("html file generation failed.")
 
     def job(self, job):
-        try:
-            log_filepath = self.mk_filepath("metadata","job.json")
-            with open(log_filepath, "w") as f:
-                f.write(json.dumps(job))
-        finally:
-            logging.error("job file generation failed.")
+        log_filepath = self.mk_filepath("metadata","job.json")
+        with open(log_filepath, "w") as f:
+            f.write(json.dumps(job))
 
