@@ -14,6 +14,7 @@ import os
 import io
 import json
 import datetime
+import bwa_snapshot
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
@@ -21,28 +22,13 @@ from playwright.async_api import async_playwright
 class bwa_crawl:
     def __init__(self, job, basedir):
         self.job = job
-        self.basedir=basedir
+        self.basedir = basedir
+        self.basename = job["url_hash"]["hex"]
 
     def dirpath(self, job):
         return os.path.join(self.basedir, job["id"])
 
-    def hashed_basename(self):
-        """
-        Extract the filename from a job's URL hash.
-
-        This function serves as a convenience accessor to retrieve the hexadecimal
-        representation of a URL's hash value from a job object. The hash is used as
-        a filename to uniquely identify and store archived web resources based on
-        their source URL, ensuring consistent naming across the crawler system.
-
-        :job: (dict) A job dictionary containing a 'url_hash' key with a 'hex' field.
-
-        :return: str: The hexadecimal hash string to be used as a filename.
-        """
-        fn = job["url_hash"]["hex"]
-        return fn
-
-    async def crawl_url_to_warc_object_async(url: str, timeout: int = 30000, user_agent: str = None):
+    async def url_to_warc(url: str, timeout: int = 30000, user_agent: str = None):
         """
         Crawl a URL using Playwright's async API, record HAR, then convert that HAR
         into a WARC object in memory, ready to be written to a .warc.gz file.
@@ -133,6 +119,7 @@ class bwa_crawl:
         return warc_buffer
 
     async def run(self, job):
+        snapshot = bwa_snapshot(job,self.dirpath)
         url = job["url"]
         async with async_playwright() as pw:
             browser = await pw.chromium.launch()
@@ -143,7 +130,9 @@ class bwa_crawl:
                 await page.goto(url)
                 
                 # snapshot logic follows
-                await snapshot_warc(job, page)
+                warc = self.warc(page.url)
+                await snapshot.warc(warc)
+
                 snapshot_job(job)
                 await snapshot_html(job,page)
                 await snapshot_image(job,page)
