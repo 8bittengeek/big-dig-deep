@@ -46,6 +46,11 @@ class bwa_manifest:
         """
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    def normalize_url(url):
+        # examples only
+        url = url.rstrip("/")
+        url = url.lower()
+        return url
 
     def publish(self):
         manifest = {
