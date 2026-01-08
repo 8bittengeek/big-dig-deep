@@ -1,7 +1,7 @@
 {
   "name": "Big Web Archive",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "index.html",
-  "description": "Archive crawler front-end",
-  "author": "Mike"
+  "description": "Web Archive and Retrieval",
+  "author": "mike@8bitgeek.net"
 }

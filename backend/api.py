@@ -34,6 +34,9 @@ jobs = {}
 
 class ArchiveRequest(BaseModel):
     url: str
+    depth: int
+    assets: int
+    timeout: int
 
 def normalize_url(url: str) -> str:
     parsed = urlparse(url)
@@ -65,7 +68,10 @@ def queue_archive(req: ArchiveRequest):
                     "status":   "queued", 
                     "url":      req.url, 
                     "url_hash": url_hash(req.url),
-                    "domain":   urlparse(req.url).netloc}
+                    "domain":   urlparse(req.url).netloc,
+                    "depth":    req.depth,
+                    "assets":   req.assets
+                    }
     crawler_data = json.dumps(jobs[id]) 
     logging.info(crawler_data)
     try:
