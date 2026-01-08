@@ -12,14 +12,7 @@
 #*******************************************************************************/
 
 import os
-import io
 import json
-import datetime
-import bwa_crawl
-from warcio import StatusAndHeaders, WARCWriter
-from datetime import datetime, UTC
-from playwright.async_api import async_playwright
-import os
 from pathlib import Path
 import logging
 
@@ -73,11 +66,11 @@ class bwa_snapshot:
         finally:
             logging.error("html file generation failed.")
 
-    def job(self, job):
+    def job(self):
         try:
             log_filepath = self.mk_filepath("metadata","job.json")
             with open(log_filepath, "w") as f:
-                f.write(json.dumps(job))
+                f.write(json.dumps(self.job))
         finally:
             logging.error("job file generation failed.")
 

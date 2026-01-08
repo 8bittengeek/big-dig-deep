@@ -116,13 +116,15 @@ class bwa_crawl:
         return warc_buffer
 
     async def run(self, job):
-        snapshot = bwa_snapshot(job,self.dirpath)
         url = job["url"]
         async with self.async_playwright() as pw:
             browser = await pw.chromium.launch()
             page = await browser.new_page()
             
             try:
+                # instatiate the snapshot object to capture to storage
+                snapshot = bwa_snapshot(job,self.dirpath)
+                
                 # Navigate to the URL
                 await page.goto(url)
                 
@@ -133,7 +135,7 @@ class bwa_crawl:
                 await snapshot.warc(warc)
                 await snapshot.html(page)
                 await snapshot.image(page)
-                snapshot.job(job)
+                snapshot.job()
             
             finally:
                 await browser.close()

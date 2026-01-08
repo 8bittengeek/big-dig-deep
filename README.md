@@ -224,6 +224,7 @@ archive.zip
 ├── warc/
 │   └── crawl.warc.gz
 ├── metadata/
+│   ├── job.json
 │   ├── crawl.log
 │   ├── snapshot.png
 │   └── snapshot.html
@@ -253,6 +254,33 @@ archive.zip
   }
 }
 ```
+
+* Crawler
+
+```
+crawler/
+├── __init__.py
+├── bwa_crawl.py
+├── bwa_snapshot.py
+└── bwa_progress.py
+```
+
+* Examble Job Response Body
+
+```
+{
+  "id": "ec774a7e-a7a6-44c4-996e-e087cc62fe89",
+  "status": "started",
+  "url": "http://8bitgeek.net",
+  "url_hash": {
+    "hex": "2feec79600cd6b94eb401bacb2278a5ca6ea4d5c8e5224ecabade01628a96cbf",
+    "base64": "L-7HlgDNa5TrQBussieKXKbqTVyOUiTsq63gFiipbL8=",
+    "length": 64
+  },
+  "domain": "8bitgeek.net"
+}
+```
+
 
 * Deduplication strategy
   * After crawl completes:
@@ -307,34 +335,6 @@ No backend private keys. No trust issues.
   * Reconstruct page history
 
 Effectively a distributed Wayback Machine.
-
----
-
-* Crawler
-
-```
-crawler/
-├── __init__.py
-├── bwa_crawl.py
-├── bwa_snapshot.py
-└── bwa_progress.py
-```
-
-* Examble Job Response Body
-
-```
-{
-  "id": "ec774a7e-a7a6-44c4-996e-e087cc62fe89",
-  "status": "started",
-  "url": "http://8bitgeek.net",
-  "url_hash": {
-    "hex": "2feec79600cd6b94eb401bacb2278a5ca6ea4d5c8e5224ecabade01628a96cbf",
-    "base64": "L-7HlgDNa5TrQBussieKXKbqTVyOUiTsq63gFiipbL8=",
-    "length": 64
-  },
-  "domain": "8bitgeek.net"
-}
-```
 
 ---
 
