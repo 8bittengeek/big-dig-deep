@@ -40,7 +40,7 @@ def fbasename(job):
 
     :return: str: The hexadecimal hash string to be used as a filename.
     """
-    fn = job["url_hash"]["hex"]
+    fn = job["url_hash"]
     return fn
 
 async def crawl_url_to_warc_object_async(url: str, timeout: int = 30000, user_agent: str = None):

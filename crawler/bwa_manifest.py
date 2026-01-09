@@ -1,4 +1,3 @@
-
 #********************************************************************************
 #          ___  _     _ _                  _                 _                  *
 #         / _ \| |   (_) |                | |               | |                 *
@@ -52,6 +51,14 @@ class bwa_manifest:
         url = url.lower()
         return url
 
+    def content_hash(self):
+        hash = "sha256:abcd1234..."
+        return hash 
+    
+    def previous_hash(self):
+        hash = "sha256:prev5678..."
+        return hash
+
     def publish(self):
         manifest = {
                         "schema": "big-web-archive/v1",
@@ -68,13 +75,19 @@ class bwa_manifest:
                             "png": "metadata/snapshot.png"
                         }
                     }
+        manifest["schema"]          = "big-web-archive/v1"
         manifest["target_url"]      = self.job["url"]
         manifest["domain"]          = self.job["domain"]
         manifest["crawl_depth"]     = self.job["depth"]
         manifest["timestamp"]       = self.get_iso_timestamp()
-        manifest["crawl_depth"]     = self.job["depth"]
         manifest["content_hash"]    = "sha256:abcd1234..."
         manifest["previous_hash"]   = "sha256:prev5678..."
+        manifest["warc"]            = "warc/crawl.warc.gz"
+        manifest["artifacts"]       = {
+                                        "log": "metadata/crawl.log",
+                                        "html": "metadata/snapshot.html",
+                                        "png": "metadata/snapshot.png"
+                                    }
         return manifest
 
 
