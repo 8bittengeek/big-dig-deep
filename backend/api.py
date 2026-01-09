@@ -14,13 +14,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
+from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+import hashlib
 
 import uuid
 import subprocess
 import logging
 import json
 import hashlib
-import base64
 
 app = FastAPI()
 app.add_middleware(
@@ -35,39 +36,52 @@ jobs = {}
 class ArchiveRequest(BaseModel):
     url: str
     depth: int
-    assets: int
-    timeout: int
+    assets: bool
+
+
+def url_key(canonical_url: str) -> str:
+    return "url-sha256:" + hashlib.sha256(
+        canonical_url.encode("utf-8")
+    ).hexdigest()
+
 
 def normalize_url(url: str) -> str:
-    parsed = urlparse(url)
-    if not parsed.scheme:
-        return "http://" + url
-    return url
+    u = urlparse(url.strip())
 
-def url_hash(url, salt=None):
-    # Create base hash
-    base_hash = hashlib.sha256(url.encode('utf-8')).digest()
-    # Add optional salt
-    if salt:
-        base_hash = hashlib.sha256(base_hash + salt.encode('utf-8')).digest()
-    # Create multiple representations
-    hex_hash = base_hash.hex()
-    base64_hash = base64.urlsafe_b64encode(base_hash).decode('utf-8')
-    return {
-        'hex': hex_hash,
-        'base64': base64_hash,
-        'length': len(hex_hash)
-    }
+    scheme = u.scheme.lower() or "http"
+    netloc = u.hostname.lower()
+
+    # strip default ports
+    if u.port and not (
+        (scheme == "http" and u.port == 80) or
+        (scheme == "https" and u.port == 443)
+    ):
+        netloc += f":{u.port}"
+
+    path = u.path or "/"
+
+    # sort query params
+    query = urlencode(sorted(parse_qsl(u.query, keep_blank_values=True)))
+
+    return urlunparse((scheme, netloc, path, "", query, ""))
+
+
+def url_key(canonical_url: str) -> str:
+    return "url-sha256:" + hashlib.sha256(
+        canonical_url.encode("utf-8")
+    ).hexdigest()
+
 
 @app.post("/job")
 def queue_archive(req: ArchiveRequest):
     # Normalize URL string
     req.url = normalize_url(req.url)
+    print(req)
     id = str(uuid.uuid4())
     jobs[id] = {"id":   id, 
                     "status":   "queued", 
                     "url":      req.url, 
-                    "url_hash": url_hash(req.url),
+                    "url_hash": url_key(req.url),
                     "domain":   urlparse(req.url).netloc,
                     "depth":    req.depth,
                     "assets":   req.assets
@@ -76,18 +90,20 @@ def queue_archive(req: ArchiveRequest):
     logging.info(crawler_data)
     try:
         logging.info(crawler_data)
-        subprocess.Popen(["python", "crawler/crawler.py", "--data", crawler_data])
+        subprocess.Popen(["python", "crawler/__main__.py", "--data", crawler_data])
         jobs[id]["status"] = "started"
     except subprocess.SubprocessError as e:
         logging.error(f"Subprocess failed: {e}")
         jobs[id]["status"] = "failed"
     return jobs[id]
 
+
 @app.get("/job/{id}")
 def get_job(id: str):
     if id not in jobs:
         raise HTTPException(404, "Job not found")
     return jobs[id]
+
 
 @app.get("/jobs")
 def get_jobs():

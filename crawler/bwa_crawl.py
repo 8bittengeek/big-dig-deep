@@ -19,7 +19,7 @@ from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
 
-class bwa_crawl:
+class crawler:
     def __init__(self, job, basedir):
         self.job = job
         self.basedir = basedir
@@ -115,8 +115,8 @@ class bwa_crawl:
         os.remove(har_path)
         return warc_buffer
 
-    async def run(self, job):
-        url = job["url"]
+    async def run(self):
+        url = self.job["url"]
         async with self.async_playwright() as pw:
             browser = await pw.chromium.launch()
             page = await browser.new_page()
@@ -124,7 +124,7 @@ class bwa_crawl:
             try:
                 # instatiate the snapshot object to capture to storage
                 snapshot = bwa_snapshot(job,self.dirpath)
-                
+
                 # Navigate to the URL
                 await page.goto(url)
                 

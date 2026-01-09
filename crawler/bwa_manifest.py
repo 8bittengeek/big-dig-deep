@@ -46,6 +46,11 @@ class bwa_manifest:
         """
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    def normalize_url(url):
+        # examples only
+        url = url.rstrip("/")
+        url = url.lower()
+        return url
 
     def publish(self):
         manifest = {
@@ -67,8 +72,9 @@ class bwa_manifest:
         manifest["domain"]          = self.job["domain"]
         manifest["crawl_depth"]     = self.job["depth"]
         manifest["timestamp"]       = self.get_iso_timestamp()
+        manifest["crawl_depth"]     = self.job["depth"]
         manifest["content_hash"]    = "sha256:abcd1234..."
         manifest["previous_hash"]   = "sha256:prev5678..."
         return manifest
-    
+
 
