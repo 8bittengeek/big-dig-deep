@@ -34,6 +34,15 @@ function applyHubTheme() {
   });
 }
 
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
 document.getElementById('submitJob').onclick = async () => {
   const payload = {
     url: document.getElementById('url').value,
@@ -41,13 +50,18 @@ document.getElementById('submitJob').onclick = async () => {
     assets: document.getElementById('assets').checked
   };
 
-  const res = await fetch(`${API}/job`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  // alert(JSON.stringify(payload))
+  if ( isValidUrl(payload.url) )
+  {
+    const res = await fetch(`${API}/job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
+  else 
+  {
+    alert("Invalid URL " + payload.url);
+  }
 
   loadJobs();
 };

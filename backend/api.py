@@ -75,7 +75,7 @@ def url_key(canonical_url: str) -> str:
 @app.post("/job")
 def queue_archive(req: ArchiveRequest):
     # Normalize URL string
-    req.url = normalize_url(req.url)
+    # req.url = normalize_url(req.url)
     print(req)
     id = str(uuid.uuid4())
     jobs[id] = {"id":   id, 

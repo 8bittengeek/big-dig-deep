@@ -15,6 +15,7 @@ import io
 import json
 import datetime
 import bwa_snapshot
+import logging
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
@@ -25,7 +26,7 @@ class crawler:
         self.basedir = basedir
         self.basename = job["url_hash"]
 
-    async def warc(url: str, timeout: int = 30000, user_agent: str = None):
+    async def warc(self, url: str, timeout: int = 30000, user_agent: str = None):
         """
         Crawl a URL using Playwright's async API, record HAR, then convert that HAR
         into a WARC object in memory, ready to be written to a .warc.gz file.
@@ -115,27 +116,52 @@ class crawler:
         os.remove(har_path)
         return warc_buffer
 
+
+    def validate_url(self,url):
+        """
+        Validate URL format before crawling
+        """
+        from urllib.parse import urlparse
+        
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except Exception:
+            return False
+
+
     async def run(self):
-        url = self.job["url"]
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch()
-            page = await browser.new_page()
-            
-            try:
-                # instatiate the snapshot object to capture to storage
-                snapshot = bwa_snapshot.snapshot(self.job,self.basedir)
-
-                # Navigate to the URL
-                await page.goto(url)
+        logging.info(f"Starting crawl for URL: {self.job['url']}")
+        
+        try:
+            url = self.job["url"]
+            if not self.validate_url(url):
+                raise ValueError(f"Invalid URL format: {url}")
+        
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch()
+                page = await browser.new_page()
                 
-                # fetch the warc object representation of the page
-                warc_buffer = self.warc(page.url)
-
-                # perform the capture to storage.
-                await snapshot.warc(warc_buffer)
-                await snapshot.html(page)
-                await snapshot.image(page)
-                snapshot.job()
-            
-            finally:
-                await browser.close()
+                try:
+                    snapshot = bwa_snapshot.snapshot(self.job, self.basedir)
+                    await page.goto(url)
+                    
+                    warc_buffer = await self.warc(url)
+                    
+                    await snapshot.store_warc(warc_buffer)
+                    await snapshot.store_html(page)
+                    await snapshot.store_image(page)
+                    snapshot.store_job()
+                    
+                    logging.info(f"Crawl completed successfully for URL: {url}")
+                
+                except Exception as e:
+                    logging.error(f"Crawl failed for URL {url}: {e}")
+                    raise
+                
+                finally:
+                    await browser.close()
+        
+        except Exception as e:
+            logging.error(f"Crawl initialization failed: {e}")
+            raise

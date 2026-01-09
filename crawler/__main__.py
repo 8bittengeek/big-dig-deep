@@ -27,5 +27,5 @@ async def run_job():
     return job
 
 if __name__ == "__main__":
-    job = asyncio.run(run_job())
+    asyncio.run(run_job())
     print(json.dumps(job))

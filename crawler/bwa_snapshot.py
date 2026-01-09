@@ -51,7 +51,7 @@ class snapshot:
         self.mkdir(metadata_dirpath)
         return os.path.join(metadata_dirpath, filename)
 
-    async def warc(self, warc_buffer):
+    async def store_warc(self, warc_buffer):
         """
         Generate WARC file from buffer.
 
@@ -76,7 +76,7 @@ class snapshot:
             self.logger.error(f"WARC file generation failed: {e}")
             raise
 
-    async def html(self, page):
+    async def store_html(self, page):
         """
         Capture HTML content from page.
 
@@ -94,7 +94,7 @@ class snapshot:
             self.logger.error(f"HTML file generation failed: {e}")
             raise
 
-    async def image(self, page):
+    async def store_image(self, page):
         """
         Capture full-page screenshot.
 
@@ -109,7 +109,7 @@ class snapshot:
             self.logger.error(f"Screenshot generation failed: {e}")
             raise
 
-    def job(self):
+    def store_job(self):
         """
         Save job metadata to JSON file.
         """
