@@ -47,6 +47,8 @@ document.getElementById('submitJob').onclick = async () => {
     body: JSON.stringify(payload)
   });
 
+  // alert(JSON.stringify(payload))
+
   loadJobs();
 };
 

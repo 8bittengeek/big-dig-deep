@@ -15,13 +15,7 @@ import os
 import io
 import json
 import datetime
-import bwa_crawl
-from warcio import StatusAndHeaders, WARCWriter
-from datetime import datetime, UTC
-from playwright.async_api import async_playwright
-import os
-from pathlib import Path
-import logging
+from datetime import datetime, timezone
 
 # {
 #   "schema": "big-web-archive/v1",
@@ -43,6 +37,21 @@ class bwa_manifest:
     def __init__(self, job):
         self.job = job
 
+
+    def get_iso_timestamp():
+        """
+        Returns the current datetime in ISO 8601 format with UTC timezone.
+        
+        :returns: str: Datetime string in the format "2026-01-07T03:14:15Z"
+        """
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def normalize_url(url):
+        # examples only
+        url = url.rstrip("/")
+        url = url.lower()
+        return url
+
     def publish(self):
         manifest = {
                         "schema": "big-web-archive/v1",
@@ -59,7 +68,13 @@ class bwa_manifest:
                             "png": "metadata/snapshot.png"
                         }
                     }
-        manifest["target_url"] = self.job
+        manifest["target_url"]      = self.job["url"]
+        manifest["domain"]          = self.job["domain"]
+        manifest["crawl_depth"]     = self.job["depth"]
+        manifest["timestamp"]       = self.get_iso_timestamp()
+        manifest["crawl_depth"]     = self.job["depth"]
+        manifest["content_hash"]    = "sha256:abcd1234..."
+        manifest["previous_hash"]   = "sha256:prev5678..."
         return manifest
-    
+
 

@@ -10,11 +10,19 @@
 #                                                                               *
 #*******************************************************************************/
 
+import argparse
 import json
 import bwa_crawl
 
-crawler = bwa_crawl()
 
-job = json.loads(sys.stdin.read())
-job = await crawler.run(job)
+parser = argparse.ArgumentParser()
+parser.add_argument('--data', type=json.loads)
+args = parser.parse_args()
+
+job = args.data
+
+crawler = bwa_crawl.crawler(job,"bwa_warc")
+
+job = crawler.run(job)
+
 print(json.dumps(job))
