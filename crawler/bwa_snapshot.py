@@ -1,4 +1,3 @@
-
 #********************************************************************************
 #          ___  _     _ _                  _                 _                  *
 #         / _ \| |   (_) |                | |               | |                 *
@@ -13,64 +12,113 @@
 
 import os
 import json
-from pathlib import Path
+import asyncio
 import logging
+from pathlib import Path
+import io
+import aiofiles
 
-class bwa_snapshot:
+class snapshot:
     def __init__(self, job, dirpath):
         self.job = job
         self.dirpath = dirpath
+        self.logger = logging.getLogger(__name__)
 
     def mkdir(self, dirpath):
         """
         Create a directory path if it does not exist.
 
-        :dirpath: The path to the directory to be created.
-        
+        :param dirpath: The path to the directory to be created.
         :returns: The path to the directory.
         """
         path = Path(dirpath)
         try:
             path.mkdir(parents=True, exist_ok=True)
-        finally:
-            logging.error("mkdir" + dirpath + "failed.")
-        return path
+            return path
+        except OSError as e:
+            self.logger.error(f"Failed to create directory {dirpath}: {e}")
+            raise
 
     def mk_filepath(self, folder, filename):
-            metadata_dirpath = os.path.join(self.dirpath, folder)
-            self.mkdir(metadata_dirpath)
-            metadata_filepath = os.path.join(metadata_dirpath, filename)
-            return metadata_filepath
+        """
+        Create a filepath for a specific folder and filename.
 
-    async def warc(self, warc):
+        :param folder: Subfolder name
+        :param filename: Filename
+        :returns: Full filepath
+        """
+        metadata_dirpath = os.path.join(self.dirpath, folder)
+        self.mkdir(metadata_dirpath)
+        return os.path.join(metadata_dirpath, filename)
+
+    async def warc(self, warc_buffer):
+        """
+        Generate WARC file from buffer.
+
+        :param warc_buffer: Buffer containing WARC data
+        """
         try:
-            warc_filepath = self.mk_filepath("warc","crawl.warc.gz")
-            with open(warc_filepath, "wb") as f:
-                f.write(warc.getvalue())
-        finally:
-            logging.error("warc file generation failed.")
+            # Ensure warc_buffer is resolved
+            if asyncio.iscoroutine(warc_buffer):
+                buffer_content = await warc_buffer
+            elif isinstance(warc_buffer, io.BytesIO):
+                buffer_content = warc_buffer
+            else:
+                raise TypeError(f"Unexpected buffer type: {type(warc_buffer)}")
+
+            warc_filepath = self.mk_filepath("warc", "crawl.warc.gz")
+            
+            async with aiofiles.open(warc_filepath, "wb") as f:
+                await f.write(buffer_content.getvalue())
+            
+            self.logger.info(f"WARC file generated: {warc_filepath}")
+        except Exception as e:
+            self.logger.error(f"WARC file generation failed: {e}")
+            raise
 
     async def html(self, page):
+        """
+        Capture HTML content from page.
+
+        :param page: Playwright page object
+        """
         try:
-            html_filepath = self.mk_filepath("metadata","snapshot.html")
+            html_filepath = self.mk_filepath("metadata", "snapshot.html")
             html = await page.content()
-            with open(html_filepath, "w") as f:
-                f.write(html)
-        finally:
-            logging.error("html file generation failed.")
+            
+            async with aiofiles.open(html_filepath, "w") as f:
+                await f.write(html)
+            
+            self.logger.info(f"HTML snapshot saved: {html_filepath}")
+        except Exception as e:
+            self.logger.error(f"HTML file generation failed: {e}")
+            raise
 
     async def image(self, page):
+        """
+        Capture full-page screenshot.
+
+        :param page: Playwright page object
+        """
         try:
-            png_filepath = self.mk_filepath("metadata","snapshot.png")
+            png_filepath = self.mk_filepath("metadata", "snapshot.png")
             await page.screenshot(path=png_filepath, full_page=True)
-        finally:
-            logging.error("html file generation failed.")
+            
+            self.logger.info(f"Screenshot saved: {png_filepath}")
+        except Exception as e:
+            self.logger.error(f"Screenshot generation failed: {e}")
+            raise
 
     def job(self):
+        """
+        Save job metadata to JSON file.
+        """
         try:
-            log_filepath = self.mk_filepath("metadata","job.json")
+            log_filepath = self.mk_filepath("metadata", "job.json")
             with open(log_filepath, "w") as f:
-                f.write(json.dumps(self.job))
-        finally:
-            logging.error("job file generation failed.")
-
+                json.dump(self.job, f, indent=2)
+            
+            self.logger.info(f"Job metadata saved: {log_filepath}")
+        except Exception as e:
+            self.logger.error(f"Job file generation failed: {e}")
+            raise

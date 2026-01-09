@@ -74,7 +74,6 @@ async function loadJobs() {
     tr.onclick = () => loadLogs(job.id);
     tbody.appendChild(tr);
   });
-
 }
 
 async function loadLogs(id) {

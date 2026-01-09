@@ -10,19 +10,22 @@
 #                                                                               *
 #*******************************************************************************/
 
+import asyncio
 import argparse
 import json
 import bwa_crawl
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=json.loads)
 args = parser.parse_args()
 
 job = args.data
-
 crawler = bwa_crawl.crawler(job,"bwa_warc")
 
-job = crawler.run(job)
+async def run_job():
+    job = await crawler.run()
+    return job
 
-print(json.dumps(job))
+if __name__ == "__main__":
+    job = asyncio.run(run_job())
+    print(json.dumps(job))

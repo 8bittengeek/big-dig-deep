@@ -23,9 +23,9 @@ class crawler:
     def __init__(self, job, basedir):
         self.job = job
         self.basedir = basedir
-        self.basename = job["url_hash"]["hex"]
+        self.basename = job["url_hash"]
 
-    async def url_to_warc(url: str, timeout: int = 30000, user_agent: str = None):
+    async def warc(url: str, timeout: int = 30000, user_agent: str = None):
         """
         Crawl a URL using Playwright's async API, record HAR, then convert that HAR
         into a WARC object in memory, ready to be written to a .warc.gz file.
@@ -117,22 +117,22 @@ class crawler:
 
     async def run(self):
         url = self.job["url"]
-        async with self.async_playwright() as pw:
+        async with async_playwright() as pw:
             browser = await pw.chromium.launch()
             page = await browser.new_page()
             
             try:
                 # instatiate the snapshot object to capture to storage
-                snapshot = bwa_snapshot(job,self.dirpath)
+                snapshot = bwa_snapshot.snapshot(self.job,self.basedir)
 
                 # Navigate to the URL
                 await page.goto(url)
                 
                 # fetch the warc object representation of the page
-                warc = self.warc(page.url)
+                warc_buffer = self.warc(page.url)
 
                 # perform the capture to storage.
-                await snapshot.warc(warc)
+                await snapshot.warc(warc_buffer)
                 await snapshot.html(page)
                 await snapshot.image(page)
                 snapshot.job()
