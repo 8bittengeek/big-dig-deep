@@ -14,8 +14,9 @@ import os
 import io
 import json
 import datetime
+import logging
 from datetime import datetime, timezone
-
+from .bwa_jobqueue import job_queue
 # {
 #   "schema": "big-web-archive/v1",
 #   "target_url": "https://example.com",
@@ -33,8 +34,32 @@ from datetime import datetime, timezone
 # }
 
 class bwa_manifest:
-    def __init__(self, job):
-        self.job = job
+    def __init__(self, job_id, basedir = "jobs/manifest"):
+        self.job_id = job_id
+        self.jobs = job_queue()
+        self.job = self.jobs.get_job(self.job_id)
+        self.dirpath = dirpath
+        logging.basicConfig(
+            level=logging.INFO,
+            stream=sys.stdout,
+            format="%(asctime)s %(levelname)s %(message)s"
+        )
+
+        # configure root logger *first*
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+
+        # ensure Uvicorn loggers propagate
+        for name in ("uvicorn.error", "uvicorn.access"):
+            uv_logger = logging.getLogger(name)
+            uv_logger.handlers.clear()
+            uv_logger.propagate = True
+
+        self.logger = logging.getLogger("bwa_snapshot")
+        self.logger.setLevel(logging.DEBUG)
 
 
     def get_iso_timestamp():
