@@ -110,9 +110,10 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
 
 @app.get("/job/{id}")
 def get_job(id: str):
-    if id not in jobs:
-        raise HTTPException(404, "Job not found")
-    return jobs.get_job(id)
+    job = jobs.get_job(id)
+    # if id not in jobs:
+    #     raise HTTPException(404, "Job not found")
+    return job
 
 
 @app.get("/jobs")
