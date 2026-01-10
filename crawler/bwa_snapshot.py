@@ -10,26 +10,59 @@
 #                                                                               *
 #*******************************************************************************/
 
+import io
 import os
+import sys
 import json
 import asyncio
 import logging
-from pathlib import Path
-import io
 import aiofiles
+from pathlib import Path
+from .bwa_jobqueue import job_queue
 
 class snapshot:
 
-    def __init__(self, job, dirpath):
-        self.job = job
+    def __init__(self, job_id, dirpath):
+        self.job_id = job_id
+        self.jobs = job_queue()
+        self.job = self.jobs.get_job(self.job_id)
         self.dirpath = dirpath
-        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            level=logging.INFO,
+            stream=sys.stdout,
+            format="%(asctime)s %(levelname)s %(message)s"
+        )
+
+        # configure root logger *first*
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+
+        # ensure Uvicorn loggers propagate
+        for name in ("uvicorn.error", "uvicorn.access"):
+            uv_logger = logging.getLogger(name)
+            uv_logger.handlers.clear()
+            uv_logger.propagate = True
+
+        self.logger = logging.getLogger("bwa_snapshot")
+        self.logger.setLevel(logging.DEBUG)
 
 
-    def fault(self, msg):
-            self.job["fault"] = msg
-            self.logger.error(msg)
-            
+    def fault(self, state, msg):
+        self.job["fault"] = state
+        self.job["message"] = msg
+        self.jobs.update_job(self.job_id,self.job)
+        self.logger.error(msg)
+
+
+    def status(self, state,  msg):
+        self.job["status"] = state
+        self.job["message"] = msg
+        self.jobs.update_job(self.job_id,self.job)
+        self.logger.info(msg)
+
 
     def mkdir(self, dirpath):
         """
@@ -43,7 +76,7 @@ class snapshot:
             path.mkdir(parents=True, exist_ok=True)
             return path
         except OSError as e:
-            self.fault(f"Failed to create directory {dirpath}: {e}")
+            self.fault("mkdir",f"Failed to create directory {dirpath}: {e}")
             raise
 
 
@@ -67,6 +100,8 @@ class snapshot:
         :param warc_buffer: Buffer containing WARC data
         """
         try:
+            self.status("warc",f"WARC file generation started.")
+
             # Ensure warc_buffer is resolved
             if asyncio.iscoroutine(warc_buffer):
                 buffer_content = await warc_buffer
@@ -80,9 +115,9 @@ class snapshot:
             async with aiofiles.open(warc_filepath, "wb") as f:
                 await f.write(buffer_content.getvalue())
             
-            self.logger.info(f"WARC file generated: {warc_filepath}")
+            self.status("warc",f"WARC file generated: {warc_filepath}")
         except Exception as e:
-            self.fault(f"WARC file generation failed: {e}")
+            self.fault("warc",f"WARC file generation failed: {e}")
             raise
 
 
@@ -99,9 +134,9 @@ class snapshot:
             async with aiofiles.open(html_filepath, "w") as f:
                 await f.write(html)
             
-            self.logger.info(f"HTML snapshot saved: {html_filepath}")
+            self.status("html",f"HTML snapshot saved: {html_filepath}")
         except Exception as e:
-            self.fault(f"HTML file generation failed: {e}")
+            self.fault("html",f"HTML file generation failed: {e}")
             raise
 
 
@@ -115,9 +150,9 @@ class snapshot:
             png_filepath = self.mk_filepath("metadata", "snapshot.png")
             await page.screenshot(path=png_filepath, full_page=True)
             
-            self.logger.info(f"Screenshot saved: {png_filepath}")
+            self.status("image",f"Screenshot saved: {png_filepath}")
         except Exception as e:
-            self.fault(f"Screenshot generation failed: {e}")
+            self.fault("image",f"Screenshot generation failed: {e}")
             raise
 
 
@@ -130,9 +165,9 @@ class snapshot:
             with open(log_filepath, "w") as f:
                 json.dump(self.job, f, indent=2)
             
-            self.logger.info(f"Job metadata saved: {log_filepath}")
+            self.status("job",f"Job metadata saved: {log_filepath}")
         except Exception as e:
-            self.fault(f"Job file generation failed: {e}")
+            self.fault("job",f"Job file generation failed: {e}")
             raise
 
     def get_job(self):
