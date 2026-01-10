@@ -15,6 +15,7 @@ import io
 import json
 import datetime
 import logging
+import sys
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
@@ -29,7 +30,22 @@ class crawler:
         self.job = self.jobs.get_job(self.job_id)
         self.basedir = basedir
         self.basename = self.job["url_hash"]
-        self.logger = logging.getLogger(__name__)
+
+        # configure root logger *first*
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+
+        # ensure Uvicorn loggers propagate
+        for name in ("uvicorn.error", "uvicorn.access"):
+            uv_logger = logging.getLogger(name)
+            uv_logger.handlers.clear()
+            uv_logger.propagate = True
+
+        self.logger = logging.getLogger("bwa_crawl")
+        self.logger.setLevel(logging.DEBUG)
 
 
     def fault(self, state, msg):

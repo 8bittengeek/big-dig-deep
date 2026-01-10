@@ -10,13 +10,14 @@
 #                                                                               *
 #*******************************************************************************/
 
+import io
 import os
+import sys
 import json
 import asyncio
 import logging
-from pathlib import Path
-import io
 import aiofiles
+from pathlib import Path
 from .bwa_jobqueue import job_queue
 
 class snapshot:
@@ -26,7 +27,27 @@ class snapshot:
         self.jobs = job_queue()
         self.job = self.jobs.get_job(self.job_id)
         self.dirpath = dirpath
-        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            level=logging.INFO,
+            stream=sys.stdout,
+            format="%(asctime)s %(levelname)s %(message)s"
+        )
+
+        # configure root logger *first*
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+
+        # ensure Uvicorn loggers propagate
+        for name in ("uvicorn.error", "uvicorn.access"):
+            uv_logger = logging.getLogger(name)
+            uv_logger.handlers.clear()
+            uv_logger.propagate = True
+
+        self.logger = logging.getLogger("bwa_snapshot")
+        self.logger.setLevel(logging.DEBUG)
 
 
     def fault(self, state, msg):
