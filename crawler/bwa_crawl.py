@@ -28,8 +28,7 @@ class crawler:
         self.job_id = job_id
         self.jobs = job_queue()
         self.job = self.jobs.get_job(self.job_id)
-        self.basedir = basedir
-        self.basename = job_id
+        self.basedir = os.path.join(basedir, f"{job_id}.d")
 
         # configure root logger *first*
         logging.basicConfig(
