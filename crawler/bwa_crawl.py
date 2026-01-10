@@ -21,10 +21,21 @@ from datetime import datetime, UTC
 from playwright.async_api import async_playwright
 
 class crawler:
+
     def __init__(self, job, basedir):
         self.job = job
         self.basedir = basedir
         self.basename = job["url_hash"]
+        self.logger = logging.getLogger(__name__)
+
+    def fault(self, msg):
+            self.job["fault"] = msg
+            self.logger.error(msg)
+
+    def status(self, msg):
+            self.job["status"] = msg
+            self.logger.info(msg)
+
 
     async def warc(self, url: str, timeout: int = 30000, user_agent: str = None):
         """
@@ -131,7 +142,7 @@ class crawler:
 
 
     async def run(self):
-        logging.info(f"Starting crawl for URL: {self.job['url']}")
+        self.status(f"Starting crawl for URL: {self.job['url']}")
         
         try:
             url = self.job["url"]
@@ -153,15 +164,15 @@ class crawler:
                     await snapshot.store_image(page)
                     snapshot.store_job()
                     
-                    logging.info(f"Crawl completed successfully for URL: {url}")
+                    self.status(f"Crawl completed successfully for URL: {url}")
                 
                 except Exception as e:
-                    logging.error(f"Crawl failed for URL {url}: {e}")
+                    self.fault(f"Crawl failed for URL {url}: {e}")
                     raise
                 
                 finally:
                     await browser.close()
         
         except Exception as e:
-            logging.error(f"Crawl initialization failed: {e}")
+            self.fault(f"Crawl initialization failed: {e}")
             raise
