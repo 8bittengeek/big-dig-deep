@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from crawler.bwa_crawl import crawler
+from fastapi import BackgroundTasks
 
 import uuid
 import subprocess
@@ -74,7 +75,7 @@ def url_key(canonical_url: str) -> str:
 
 
 @app.post("/job")
-async def queue_archive(req: ArchiveRequest):
+async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
     # Normalize URL string
     # req.url = normalize_url(req.url)
     logging.info(req)
@@ -94,7 +95,8 @@ async def queue_archive(req: ArchiveRequest):
         logging.info(crawler_data)
         jobs[id]["status"] = "started"
         crawl = crawler(jobs[id],"bwa_warc")
-        jobs[id] = await crawl.run()
+        background_tasks.add_task(run_crawl, crawl)
+
 
     except subprocess.SubprocessError as e:
         logging.error(f"Subprocess failed: {e}")
@@ -112,4 +114,8 @@ def get_job(id: str):
 @app.get("/jobs")
 def get_jobs():
     return jobs
+
+
+async def run_crawl(crawl_instance):
+    jobs[crawl_instance.job["id"]] = await crawl_instance.run()
 
