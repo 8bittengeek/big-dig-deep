@@ -14,10 +14,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import BackgroundTasks
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from crawler.bwa_crawl import crawler
+from crawler.bwa_jobqueue import job_queue
 
-import uuid
+import os
 import subprocess
 import logging
 import json
@@ -32,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-jobs = {}
+jobs = job_queue()
 
 class ArchiveRequest(BaseModel):
     url: str
@@ -74,42 +76,54 @@ def url_key(canonical_url: str) -> str:
 
 
 @app.post("/job")
-async def queue_archive(req: ArchiveRequest):
+async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
     # Normalize URL string
     # req.url = normalize_url(req.url)
     logging.info(req)
-    id = str(uuid.uuid4())
-    jobs[id] = {"id":   id, 
-                    "status":   "queued",
-                    "message":  "",
-                    "url":      req.url, 
-                    "url_hash": url_key(req.url),
-                    "domain":   urlparse(req.url).netloc,
-                    "depth":    req.depth,
-                    "assets":   req.assets
-                    }
-    crawler_data = json.dumps(jobs[id]) 
+    id = jobs.create_job({
+                            "status":   "queued",
+                            "message":  "",
+                            "url":      req.url, 
+                            "url_hash": url_key(req.url),
+                            "domain":   urlparse(req.url).netloc,
+                            "depth":    req.depth,
+                            "assets":   req.assets
+                        })
+    job = jobs.get_job(id)
+    crawler_data = json.dumps(job) 
     logging.info(crawler_data)
+    
     try:
+    
         logging.info(crawler_data)
-        jobs[id]["status"] = "started"
-        crawl = crawler(jobs[id],"bwa_warc")
-        jobs[id] = await crawl.run()
+        jobs.update_job(id,{"status":"started"})
 
+        crawl = crawler(id)
+        background_tasks.add_task(run_crawl, crawl)
+        
+        jobs.update_job(id,{"status":"complete"})
+    
     except subprocess.SubprocessError as e:
+
         logging.error(f"Subprocess failed: {e}")
-        jobs[id]["status"] = "failed"
-    return jobs[id]
+        jobs.update_job(id,{"status":"failed"})
+    
+    return job
 
 
 @app.get("/job/{id}")
 def get_job(id: str):
-    if id not in jobs:
-        raise HTTPException(404, "Job not found")
-    return jobs[id]
+    job = jobs.get_job(id)
+    # if id not in jobs:
+    #     raise HTTPException(404, "Job not found")
+    return job
 
 
 @app.get("/jobs")
 def get_jobs():
-    return jobs
+    return jobs.list_jobs()
+
+
+async def run_crawl(crawl):
+    await crawl.run()
 

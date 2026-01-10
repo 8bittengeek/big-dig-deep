@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # Copy code after installing deps
 COPY backend/ backend/
 COPY crawler/ crawler/
+COPY jobs/ jobs/
 
 EXPOSE 8000
 

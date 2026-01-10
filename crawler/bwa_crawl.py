@@ -15,29 +15,49 @@ import io
 import json
 import datetime
 import logging
+import sys
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
 from .bwa_snapshot import snapshot
+from .bwa_jobqueue import job_queue
 
 class crawler:
 
-    def __init__(self, job, basedir):
-        self.job = job
-        self.basedir = basedir
-        self.basename = job["url_hash"]
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, job_id, basedir = "jobs/manifest"):
+        self.job_id = job_id
+        self.jobs = job_queue()
+        self.job = self.jobs.get_job(self.job_id)
+        self.basedir = os.path.join(basedir, f"{job_id}.d")
+
+        # configure root logger *first*
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+
+        # ensure Uvicorn loggers propagate
+        for name in ("uvicorn.error", "uvicorn.access"):
+            uv_logger = logging.getLogger(name)
+            uv_logger.handlers.clear()
+            uv_logger.propagate = True
+
+        self.logger = logging.getLogger("bwa_crawl")
+        self.logger.setLevel(logging.DEBUG)
 
 
     def fault(self, state, msg):
             self.job["fault"] = state
             self.job["message"] = msg
+            self.jobs.update_job(self.job_id,self.job)
             self.logger.error(msg)
 
 
     def status(self, state,  msg):
             self.job["status"] = state
             self.job["message"] = msg
+            self.jobs.update_job(self.job_id,self.job)
             self.logger.info(msg)
 
 
@@ -158,7 +178,7 @@ class crawler:
                 page = await browser.new_page()
                 
                 try:
-                    snap = snapshot(self.job, self.basedir)
+                    snap = snapshot(self.job_id, self.basedir)
                     await page.goto(url)
                     
                     warc_buffer = await self.warc(url)
@@ -167,11 +187,6 @@ class crawler:
                     await snap.store_html(page)
                     await snap.store_image(page)
                     snap.store_job()
-                    
-                    # get snapshot job state updates
-                    self.job = snap.get_job()
-
-                    self.status("complete",f"Crawl completed successfully for URL: {url}")
                 
                 except Exception as e:
                     self.fault("failed",f"Crawl failed for URL {url}: {e}")
@@ -184,4 +199,5 @@ class crawler:
             self.fault("failed",f"Crawl initialization failed: {e}")
             raise
         
-        return self.job
+        return self.job_id
+    

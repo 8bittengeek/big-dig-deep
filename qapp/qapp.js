@@ -98,18 +98,41 @@ async function loadJobs() {
   tbody.innerHTML = '';
 
   jobs.forEach(job => {
-    const tr = document.createElement('tr');
+    const row = document.createElement('tr');
+    row.className = 'job-row';
 
-    tr.innerHTML = `
+    row.innerHTML = `
       <td>${job.id}</td>
-      <td>${job.status}</td>
+      <td>${job.status ?? ''}</td>
       <td>${job.domain ?? ''}</td>
-      <td>${job.url_hash.hex ?? ''}</td>
-      <td>${job.url ?? ''}</td>
     `;
 
-    tr.onclick = () => loadLogs(job.id);
-    tbody.appendChild(tr);
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'job-detail';
+    detailRow.style.display = 'none';
+
+    detailRow.innerHTML = `
+      <td colspan="3">
+        <div class="detail-grid">
+          <div><strong>URL</strong><br>${job.domain ?? ''}</div>
+          <div><strong>URL</strong><br>${job.url ?? ''}</div>
+          <div><strong>URL Hash</strong><br>${job.url_hash ?? ''}</div>
+          <div><strong>Status</strong><br>${job.status ?? ''}</div>
+          <div><strong>Message</strong><br>${job.message ?? ''}</div>
+          <!-- add as many fields as you want -->
+        </div>
+        <button onclick="loadLogs('${job.id}')">View Logs</button>
+      </td>
+    `;
+
+    row.onclick = () => {
+      const isOpen = detailRow.style.display === 'table-row';
+      document.querySelectorAll('.job-detail').forEach(r => r.style.display = 'none');
+      detailRow.style.display = isOpen ? 'none' : 'table-row';
+    };
+
+    tbody.appendChild(row);
+    tbody.appendChild(detailRow);
   });
 }
 
@@ -136,4 +159,4 @@ window.addEventListener('message', e => {
 });
 
 loadJobs();
-setInterval(loadJobs, 5000);
+setInterval(loadJobs, 3000);
