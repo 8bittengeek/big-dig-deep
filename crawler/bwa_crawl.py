@@ -14,11 +14,11 @@ import os
 import io
 import json
 import datetime
-import bwa_snapshot
 import logging
 from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
+from .bwa_snapshot import snapshot
 
 class crawler:
 
@@ -28,12 +28,16 @@ class crawler:
         self.basename = job["url_hash"]
         self.logger = logging.getLogger(__name__)
 
-    def fault(self, msg):
-            self.job["fault"] = msg
+
+    def fault(self, state, msg):
+            self.job["fault"] = state
+            self.job["message"] = msg
             self.logger.error(msg)
 
-    def status(self, msg):
-            self.job["status"] = msg
+
+    def status(self, state,  msg):
+            self.job["status"] = state
+            self.job["message"] = msg
             self.logger.info(msg)
 
 
@@ -142,7 +146,7 @@ class crawler:
 
 
     async def run(self):
-        self.status(f"Starting crawl for URL: {self.job['url']}")
+        self.status("start",f"Starting crawl for URL: {self.job['url']}")
         
         try:
             url = self.job["url"]
@@ -154,25 +158,30 @@ class crawler:
                 page = await browser.new_page()
                 
                 try:
-                    snapshot = bwa_snapshot.snapshot(self.job, self.basedir)
+                    snap = snapshot(self.job, self.basedir)
                     await page.goto(url)
                     
                     warc_buffer = await self.warc(url)
                     
-                    await snapshot.store_warc(warc_buffer)
-                    await snapshot.store_html(page)
-                    await snapshot.store_image(page)
-                    snapshot.store_job()
+                    await snap.store_warc(warc_buffer)
+                    await snap.store_html(page)
+                    await snap.store_image(page)
+                    snap.store_job()
                     
-                    self.status(f"Crawl completed successfully for URL: {url}")
+                    # get snapshot job state updates
+                    self.job = snap.get_job()
+
+                    self.status("complete",f"Crawl completed successfully for URL: {url}")
                 
                 except Exception as e:
-                    self.fault(f"Crawl failed for URL {url}: {e}")
+                    self.fault("failed",f"Crawl failed for URL {url}: {e}")
                     raise
                 
                 finally:
                     await browser.close()
-        
+
         except Exception as e:
-            self.fault(f"Crawl initialization failed: {e}")
+            self.fault("failed",f"Crawl initialization failed: {e}")
             raise
+        
+        return self.job

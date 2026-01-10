@@ -134,3 +134,6 @@ class snapshot:
         except Exception as e:
             self.fault(f"Job file generation failed: {e}")
             raise
+
+    def get_job(self):
+        return self.job;

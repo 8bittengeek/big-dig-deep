@@ -15,13 +15,14 @@ from pydantic import BaseModel
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
-import hashlib
+from crawler.bwa_crawl import crawler
 
 import uuid
 import subprocess
 import logging
 import json
 import hashlib
+
 
 app = FastAPI()
 app.add_middleware(
@@ -73,14 +74,14 @@ def url_key(canonical_url: str) -> str:
 
 
 @app.post("/job")
-def queue_archive(req: ArchiveRequest):
+async def queue_archive(req: ArchiveRequest):
     # Normalize URL string
     # req.url = normalize_url(req.url)
     logging.info(req)
     id = str(uuid.uuid4())
     jobs[id] = {"id":   id, 
                     "status":   "queued",
-                    "fault":    "",
+                    "message":  "",
                     "url":      req.url, 
                     "url_hash": url_key(req.url),
                     "domain":   urlparse(req.url).netloc,
@@ -91,8 +92,10 @@ def queue_archive(req: ArchiveRequest):
     logging.info(crawler_data)
     try:
         logging.info(crawler_data)
-        subprocess.Popen(["python", "crawler/__main__.py", "--data", crawler_data])
         jobs[id]["status"] = "started"
+        crawl = crawler(jobs[id],"bwa_warc")
+        jobs[id] = await crawl.run()
+
     except subprocess.SubprocessError as e:
         logging.error(f"Subprocess failed: {e}")
         jobs[id]["status"] = "failed"
