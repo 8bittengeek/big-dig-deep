@@ -41,6 +41,44 @@ class job_queue:
         with open(job_path, "rb") as f:
             return pickle.load(f)
 
-    def list_jobs(self) -> list[str]:
-        """List all saved job UUID keys."""
-        return os.listdir(self.jobs_dir)
+    def list_jobs(self) -> list[dict[str, Any]]:
+        """Return the contents of every job file in the jobs directory."""
+        jobs = []
+        for fname in os.listdir(self.jobs_dir):
+            job_path = os.path.join(self.jobs_dir, fname)
+            if os.path.isfile(job_path):
+                with open(job_path, "rb") as f:
+                    jobs.append(pickle.load(f))
+        return jobs
+
+    def count_jobs(self) -> int:
+        """Return the number of job files stored in the jobs directory."""
+        return len([name for name in os.listdir(self.jobs_dir)
+                    if os.path.isfile(os.path.join(self.jobs_dir, name))])
+
+    def remove_job(self, job_id: str) -> bool:
+        """Remove a job file by UUID key. Returns True if removed, False if not found."""
+        job_path = os.path.join(self.jobs_dir, job_id)
+        if os.path.isfile(job_path):
+            os.remove(job_path)
+            return True
+        return False
+    
+    def update_job(self, job_id: str, new_data: dict[str, Any]) -> dict[str, Any] | None:
+        """
+        Update a job dict with new data and save it.
+        Returns the updated job dict or None if job not found.
+        """
+        job = self.get_job(job_id)
+        if job is None:
+            return None
+
+        # Merge new_data into existing job
+        job.update(new_data)
+
+        # Overwrite file
+        job_path = os.path.join(self.jobs_dir, job_id)
+        with open(job_path, "wb") as f:
+            pickle.dump(job, f)
+
+        return job

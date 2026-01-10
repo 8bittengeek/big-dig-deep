@@ -19,13 +19,16 @@ from warcio import StatusAndHeaders, WARCWriter
 from datetime import datetime, UTC
 from playwright.async_api import async_playwright
 from .bwa_snapshot import snapshot
+from .bwa_jobqueue import job_queue
 
 class crawler:
 
-    def __init__(self, job, basedir):
-        self.job = job
+    def __init__(self, job_id, basedir):
+        self.job_id = job_id
+        self.jobs = job_queue()
+        self.job = self.jobs.get_job(self.job_id)
         self.basedir = basedir
-        self.basename = job["url_hash"]
+        self.basename = self.job["url_hash"]
         self.logger = logging.getLogger(__name__)
 
 
