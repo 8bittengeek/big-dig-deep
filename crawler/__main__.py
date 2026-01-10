@@ -20,7 +20,7 @@ parser.add_argument('--data', type=json.loads)
 args = parser.parse_args()
 
 job = args.data
-crawler = bwa_crawl.crawler(job,"bwa_warc")
+crawler = bwa_crawl.crawler(job)
 
 async def run_job():
     job = await crawler.run()

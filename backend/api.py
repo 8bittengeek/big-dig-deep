@@ -19,6 +19,7 @@ from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from crawler.bwa_crawl import crawler
 from crawler.bwa_jobqueue import job_queue
 
+import os
 import subprocess
 import logging
 import json
@@ -96,8 +97,10 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
     
         logging.info(crawler_data)
         jobs.update_job(id,{"status":"started"})
-        crawl = crawler(id,"bwa_warc")
+
+        crawl = crawler(id)
         background_tasks.add_task(run_crawl, crawl)
+        
         jobs.update_job(id,{"status":"complete"})
     
     except subprocess.SubprocessError as e:

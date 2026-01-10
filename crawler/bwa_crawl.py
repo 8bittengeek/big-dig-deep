@@ -24,12 +24,12 @@ from .bwa_jobqueue import job_queue
 
 class crawler:
 
-    def __init__(self, job_id, basedir):
+    def __init__(self, job_id, basedir = "jobs/manifest"):
         self.job_id = job_id
         self.jobs = job_queue()
         self.job = self.jobs.get_job(self.job_id)
         self.basedir = basedir
-        self.basename = self.job["url_hash"]
+        self.basename = job_id
 
         # configure root logger *first*
         logging.basicConfig(
