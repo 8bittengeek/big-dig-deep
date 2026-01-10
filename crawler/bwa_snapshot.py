@@ -19,10 +19,17 @@ import io
 import aiofiles
 
 class snapshot:
+
     def __init__(self, job, dirpath):
         self.job = job
         self.dirpath = dirpath
         self.logger = logging.getLogger(__name__)
+
+
+    def fault(self, msg):
+            self.job["fault"] = msg
+            self.logger.error(msg)
+            
 
     def mkdir(self, dirpath):
         """
@@ -36,8 +43,9 @@ class snapshot:
             path.mkdir(parents=True, exist_ok=True)
             return path
         except OSError as e:
-            self.logger.error(f"Failed to create directory {dirpath}: {e}")
+            self.fault(f"Failed to create directory {dirpath}: {e}")
             raise
+
 
     def mk_filepath(self, folder, filename):
         """
@@ -50,6 +58,7 @@ class snapshot:
         metadata_dirpath = os.path.join(self.dirpath, folder)
         self.mkdir(metadata_dirpath)
         return os.path.join(metadata_dirpath, filename)
+
 
     async def store_warc(self, warc_buffer):
         """
@@ -73,8 +82,9 @@ class snapshot:
             
             self.logger.info(f"WARC file generated: {warc_filepath}")
         except Exception as e:
-            self.logger.error(f"WARC file generation failed: {e}")
+            self.fault(f"WARC file generation failed: {e}")
             raise
+
 
     async def store_html(self, page):
         """
@@ -91,8 +101,9 @@ class snapshot:
             
             self.logger.info(f"HTML snapshot saved: {html_filepath}")
         except Exception as e:
-            self.logger.error(f"HTML file generation failed: {e}")
+            self.fault(f"HTML file generation failed: {e}")
             raise
+
 
     async def store_image(self, page):
         """
@@ -106,8 +117,9 @@ class snapshot:
             
             self.logger.info(f"Screenshot saved: {png_filepath}")
         except Exception as e:
-            self.logger.error(f"Screenshot generation failed: {e}")
+            self.fault(f"Screenshot generation failed: {e}")
             raise
+
 
     def store_job(self):
         """
@@ -120,5 +132,5 @@ class snapshot:
             
             self.logger.info(f"Job metadata saved: {log_filepath}")
         except Exception as e:
-            self.logger.error(f"Job file generation failed: {e}")
+            self.fault(f"Job file generation failed: {e}")
             raise

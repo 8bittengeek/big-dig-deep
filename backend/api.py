@@ -76,10 +76,11 @@ def url_key(canonical_url: str) -> str:
 def queue_archive(req: ArchiveRequest):
     # Normalize URL string
     # req.url = normalize_url(req.url)
-    print(req)
+    logging.info(req)
     id = str(uuid.uuid4())
     jobs[id] = {"id":   id, 
-                    "status":   "queued", 
+                    "status":   "queued",
+                    "fault":    "",
                     "url":      req.url, 
                     "url_hash": url_key(req.url),
                     "domain":   urlparse(req.url).netloc,
