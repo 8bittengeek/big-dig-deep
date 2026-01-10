@@ -11,6 +11,14 @@
 //******************************************************************************/
 const API = 'http://localhost:8000';
 
+/**
+ * Applies theme variables from the parent window to the current document.
+ * Retrieves Material Design Color (MDC) theme variables from the parent's computed styles
+ * and applies them to the current document's root element to maintain visual consistency.
+ * 
+ * @function applyHubTheme
+ * @returns {void}
+ */
 function applyHubTheme() {
   // Get computed variables from the parent
   const parentStyles = getComputedStyle(window.parent.document.documentElement);
@@ -34,6 +42,13 @@ function applyHubTheme() {
   });
 }
 
+/**
+ * Validates whether a given string is a valid URL.
+ * 
+ * @function isValidUrl
+ * @param {string} string - The string to validate as a URL
+ * @returns {boolean} True if the string is a valid URL, false otherwise
+ */
 function isValidUrl(string) {
   try {
     new URL(string);
@@ -66,6 +81,14 @@ document.getElementById('submitJob').onclick = async () => {
   loadJobs();
 };
 
+/**
+ * Fetches all jobs from the API and populates the jobs table with the results.
+ * Clears the existing table body and creates table rows for each job with click handlers.
+ * 
+ * @async
+ * @function loadJobs
+ * @returns {Promise<void>}
+ */
 async function loadJobs() {
   const res = await fetch(`${API}/jobs`);
   const jobsObj = await res.json();
@@ -90,6 +113,15 @@ async function loadJobs() {
   });
 }
 
+/**
+ * Fetches and displays the log output for a specific job.
+ * Retrieves the job details from the API and populates the log display element.
+ * 
+ * @async
+ * @function loadLogs
+ * @param {string|number} id - The ID of the job to fetch logs for
+ * @returns {Promise<void>}
+ */
 async function loadLogs(id) {
   const res = await fetch(`${API}/job/${id}`);
   document.getElementById('log').textContent = await res.text();
@@ -98,7 +130,7 @@ async function loadLogs(id) {
 // Apply immediately
 applyHubTheme();
 
-// Optional: reapply if theme changes (Hub may dispatch event)
+// Reapply if theme changes (Hub may dispatch event)
 window.addEventListener('message', e => {
   if (e.data?.type === 'themeChange') applyHubTheme();
 });
