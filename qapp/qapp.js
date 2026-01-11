@@ -97,7 +97,7 @@ function createArchiveTab(url, path) {
   tabButton.setAttribute('data-tab', tabId);
   tabButton.innerHTML = `
     <span class="archive-tab-title" title="${url}">${tabTitle}</span>
-    <button class="archive-tab-close" onclick="closeArchiveTab('${tabId}', event)">×</button>
+    <button class="archive-tab-close">×</button>
   `;
   
   // Add click handler for tab switching
@@ -106,6 +106,15 @@ function createArchiveTab(url, path) {
       switchToArchiveTab(tabId);
     }
   });
+  
+  // Add close button handler separately
+  const closeBtn = tabButton.querySelector('.archive-tab-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeArchiveTab(tabId, e);
+    });
+  }
   
   // Create tab content
   const tabContent = document.createElement('div');
@@ -306,72 +315,79 @@ async function loadJobs() {
   const jobs = Object.values(jobsObj);
 
   const tbody = document.querySelector('#jobsTable tbody');
-  tbody.innerHTML = '';
+  
+  // Only rebuild table if job count changed or first load
+  const currentJobCount = tbody.children.length;
+  const newJobCount = jobs.length;
+  
+  if (currentJobCount === 0 || currentJobCount !== newJobCount) {
+    tbody.innerHTML = '';
+    
+    jobs.forEach(job => {
+      const row = document.createElement('tr');
+      row.className = 'job-row';
 
-  jobs.forEach(job => {
-    const row = document.createElement('tr');
-    row.className = 'job-row';
+      row.innerHTML = `
+        <td>${job.id}</td>
+        <td>${job.status ?? ''}</td>
+        <td>${job.domain ?? ''}</td>
+      `;
 
-    row.innerHTML = `
-      <td>${job.id}</td>
-      <td>${job.status ?? ''}</td>
-      <td>${job.domain ?? ''}</td>
-    `;
+      const detailRow = document.createElement('tr');
+      detailRow.className = 'job-detail';
+      detailRow.style.display = 'none';
 
-    const detailRow = document.createElement('tr');
-    detailRow.className = 'job-detail';
-    detailRow.style.display = 'none';
-
-    detailRow.innerHTML = `
-      <td colspan="3">
-        <div class="detail-grid">
-          <div><strong>URL</strong><br>${job.domain ?? ''}</div>
-          <div><strong>URL</strong><br>${job.url ?? ''}</div>
-          <div><strong>URL Hash</strong><br>${job.url_hash ?? ''}</div>
-          <div><strong>Status</strong><br>${job.status ?? ''}</div>
-          <div><strong>Message</strong><br>${job.message ?? ''}</div>
-          <!-- add as many fields as you want -->
-        </div>
+      detailRow.innerHTML = `
+        <td colspan="3">
+          <div class="detail-grid">
+            <div><strong>URL</strong><br>${job.domain ?? ''}</div>
+            <div><strong>URL</strong><br>${job.url ?? ''}</div>
+            <div><strong>URL Hash</strong><br>${job.url_hash ?? ''}</div>
+            <div><strong>Status</strong><br>${job.status ?? ''}</div>
+            <div><strong>Message</strong><br>${job.message ?? ''}</div>
+            <!-- add as many fields as you want -->
+          </div>
         <button class="view-logs-btn" data-job-id="${job.id}">View Logs</button>
         <button class="get-archive-btn" data-job-url="${job.url}">Get Archive</button>
-      </td>
-    `;
+        </td>
+      `;
 
-    row.onclick = () => {
-      const isOpen = detailRow.style.display === 'table-row';
-      document.querySelectorAll('.job-detail').forEach(r => r.style.display = 'none');
-      detailRow.style.display = isOpen ? 'none' : 'table-row';
-    };
+      row.onclick = () => {
+        const isOpen = detailRow.style.display === 'table-row';
+        document.querySelectorAll('.job-detail').forEach(r => r.style.display = 'none');
+        detailRow.style.display = isOpen ? 'none' : 'table-row';
+      };
 
-    tbody.appendChild(row);
-    tbody.appendChild(detailRow);
-    
-    // Add event listeners for the buttons (clear existing ones first)
-    const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
-    const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
-    
-    if (viewLogsBtn) {
-      // Clone button to remove existing event listeners
-      const newViewLogsBtn = viewLogsBtn.cloneNode(true);
-      viewLogsBtn.parentNode.replaceChild(newViewLogsBtn, viewLogsBtn);
+      tbody.appendChild(row);
+      tbody.appendChild(detailRow);
       
-      newViewLogsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        loadLogs(job.id);
-      });
-    }
-    
-    if (getArchiveBtn) {
-      // Clone button to remove existing event listeners
-      const newGetArchiveBtn = getArchiveBtn.cloneNode(true);
-      getArchiveBtn.parentNode.replaceChild(newGetArchiveBtn, getArchiveBtn);
+      // Add event listeners for the buttons (clear existing ones first)
+      const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
+      const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
       
-      newGetArchiveBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        getArchive(job.url);
-      });
-    }
-  });
+      if (viewLogsBtn) {
+        // Clone button to remove existing event listeners
+        const newViewLogsBtn = viewLogsBtn.cloneNode(true);
+        viewLogsBtn.parentNode.replaceChild(newViewLogsBtn, viewLogsBtn);
+        
+        newViewLogsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadLogs(job.id);
+        });
+      }
+      
+      if (getArchiveBtn) {
+        // Clone button to remove existing event listeners
+        const newGetArchiveBtn = getArchiveBtn.cloneNode(true);
+        getArchiveBtn.parentNode.replaceChild(newGetArchiveBtn, getArchiveBtn);
+        
+        newGetArchiveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          getArchive(job.url);
+        });
+      }
+    });
+  }
 }
 
 /**
@@ -466,6 +482,8 @@ async function loadArchiveContent(tabId, path, originalUrl) {
       iframe.onload = () => {
         URL.revokeObjectURL(url);
       };
+      
+      console.log(`Archive loaded successfully for tab ${tabId}`);
     } else {
       // Try index.html as fallback
       const indexResponse = await fetch(`${API}/archive-content?path=${encodeURIComponent(path + '/index.html')}`);
@@ -479,8 +497,11 @@ async function loadArchiveContent(tabId, path, originalUrl) {
         iframe.onload = () => {
           URL.revokeObjectURL(url);
         };
+        
+        console.log(`Archive loaded successfully for tab ${tabId} (index.html fallback)`);
       } else {
         iframe.srcdoc = '<html><body><h2>Archive content not found</h2><p>The requested archive could not be loaded.</p></body></html>';
+        console.error(`Failed to load archive content for tab ${tabId}`);
       }
     }
   } catch (error) {
@@ -535,9 +556,12 @@ function openArchiveInNewWindow(tabId) {
  */
 async function loadIdentity() {
   try {
-    const response = await qortalRequest({
-      action: "GET_USER_ACCOUNT"
-    });
+    const response = await Promise.race([
+      qortalRequest({
+        action: "GET_USER_ACCOUNT"
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Identity timeout')), 5000)
+    ]);
     document.getElementById('identityName').textContent = response.name || response.address || 'Unknown';
   } catch (e) {
     document.getElementById('identityName').textContent = 'Error loading identity';
