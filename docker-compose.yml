@@ -4,11 +4,10 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: archive-backend
+    network_mode: host
     volumes:
       - ./backend:/app/backend
       - ./crawler:/app/crawler
-    ports:
-      - "8000:8000"
     environment:
       # point backend to native Qortal API on host
       - QORTAL_API_URL=http://host.docker.internal:62392
