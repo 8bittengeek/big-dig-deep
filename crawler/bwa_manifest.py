@@ -268,7 +268,7 @@ class bwa_manifest:
             publish_url = f"{self.QDN_API_BASE}/arbitrary/{self.QDN_SERVICE}/{self.QDN_NAME}/{identifier}/zip"
             data = {"data": zip_base64}
             try:
-                response = requests.post(publish_url, json=data)
+                response = requests.post(publish_url, json=data, timeout=10)  # 10 second timeout
                 if response.status_code == 200:
                     self.logger.info("Successfully published to QDN")
                     return manifest
@@ -312,12 +312,12 @@ class bwa_manifest:
         }
         manifests = []
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)  # 10 second timeout
             if response.status_code == 200:
                 resources = response.json()
                 for resource in resources:
                     data_url = f"{self.QDN_API_BASE}/arbitrary/{resource['service']}/{resource['name']}/{resource['identifier']}"
-                    data_response = requests.get(data_url)
+                    data_response = requests.get(data_url, timeout=10)  # 10 second timeout
                     if data_response.status_code == 200:
                         zip_data = io.BytesIO(data_response.content)
                         with zipfile.ZipFile(zip_data, 'r') as zip_file:

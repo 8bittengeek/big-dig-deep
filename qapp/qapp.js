@@ -429,17 +429,18 @@ async function getArchive(url) {
     
     const result = await res.json();
     
-    if (result.path) {
-      // Create new archive tab
+    if (result.status === "fetching") {
+      // Archive is being fetched, start polling for completion
+      document.getElementById('log').textContent = `Fetching archive: ${url} (Job ID: ${result.job_id})`;
+      
+      // Poll for completion
+      pollArchiveCompletion(result.job_id, url);
+      
+    } else if (result.path) {
+      // Archive already available
       const tabId = createArchiveTab(url, result.path);
-      
-      // Switch to new tab
       switchToArchiveTab(tabId);
-      
-      // Load the archived content
       await loadArchiveContent(tabId, result.path, url);
-      
-      // Update log for reference
       document.getElementById('log').textContent = `Archive loaded: ${url} -> Tab: ${tabId}`;
     } else {
       document.getElementById('log').textContent = "No archive found for this URL";
@@ -448,6 +449,53 @@ async function getArchive(url) {
     console.error('Error in getArchive:', error);
     document.getElementById('log').textContent = `Error loading archive: ${error.message}`;
   }
+}
+
+/**
+ * Polls for archive fetch completion.
+ * 
+ * @async
+ * @function pollArchiveCompletion
+ * @param {string} jobId - The job ID to poll
+ * @param {string} originalUrl - The original URL being archived
+ * @returns {Promise<void>}
+ */
+async function pollArchiveCompletion(jobId, originalUrl) {
+  const maxAttempts = 30; // 30 attempts = 5 minutes
+  let attempts = 0;
+  
+  const pollInterval = setInterval(async () => {
+    attempts++;
+    
+    try {
+      const res = await fetch(`${API}/job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: "job", id: jobId })
+      });
+      
+      const job = await res.json();
+      
+      if (job.status === "complete" && job.path) {
+        clearInterval(pollInterval);
+        const tabId = createArchiveTab(originalUrl, job.path);
+        switchToArchiveTab(tabId);
+        await loadArchiveContent(tabId, job.path, originalUrl);
+        document.getElementById('log').textContent = `Archive loaded: ${originalUrl} -> Tab: ${tabId}`;
+        
+      } else if (job.status === "failed") {
+        clearInterval(pollInterval);
+        document.getElementById('log').textContent = `Failed to fetch archive: ${job.message}`;
+        
+      } else if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        document.getElementById('log').textContent = `Timeout fetching archive after ${maxAttempts * 10} seconds`;
+      }
+      
+    } catch (error) {
+      console.error('Error polling archive:', error);
+    }
+  }, 10000); // Poll every 10 seconds
 }
 
 /**
