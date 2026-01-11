@@ -195,6 +195,7 @@ class crawler:
                     raise
                 
                 finally:
+                    await page.close()
                     await browser.close()
 
         except Exception as e:
