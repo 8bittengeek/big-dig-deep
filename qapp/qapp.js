@@ -60,6 +60,7 @@ function isValidUrl(string) {
 
 document.getElementById('submitJob').onclick = async () => {
   const payload = {
+    op: "new",
     url: document.getElementById('url').value,
     depth: Number(document.getElementById('depth').value),
     assets: document.getElementById('assets').checked
@@ -90,7 +91,11 @@ document.getElementById('submitJob').onclick = async () => {
  * @returns {Promise<void>}
  */
 async function loadJobs() {
-  const res = await fetch(`${API}/jobs`);
+  const res = await fetch(`${API}/job`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: "jobs" })
+  });
   const jobsObj = await res.json();
   const jobs = Object.values(jobsObj);
 
@@ -122,6 +127,7 @@ async function loadJobs() {
           <!-- add as many fields as you want -->
         </div>
         <button onclick="loadLogs('${job.id}')">View Logs</button>
+        <button onclick="getArchive('${job.url}')">Get Archive</button>
       </td>
     `;
 
@@ -146,8 +152,35 @@ async function loadJobs() {
  * @returns {Promise<void>}
  */
 async function loadLogs(id) {
-  const res = await fetch(`${API}/job/${id}`);
-  document.getElementById('log').textContent = await res.text();
+  const res = await fetch(`${API}/job`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: "job", id: id })
+  });
+  const job = await res.json();
+  document.getElementById('log').textContent = JSON.stringify(job, null, 2);
+}
+
+/**
+ * Fetches and displays the archive path for a given URL.
+ * 
+ * @async
+ * @function getArchive
+ * @param {string} url - The URL to get the archive for
+ * @returns {Promise<void>}
+ */
+async function getArchive(url) {
+  const res = await fetch(`${API}/job`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: "get", url: url })
+  });
+  const result = await res.json();
+  if (result.path) {
+    document.getElementById('log').textContent = `Archive extracted to: ${result.path}`;
+  } else {
+    document.getElementById('log').textContent = "No archive found for this URL";
+  }
 }
 
 // Apply immediately
