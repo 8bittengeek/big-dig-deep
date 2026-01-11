@@ -44,9 +44,8 @@ class bwa_manifest:
     QDN_NAME = "big-web-archive"
     QDN_API_BASE = "http://localhost:8000" 
 
-    def __init__(self, job_id, url_key, basedir = "jobs/manifest"):
+    def __init__(self, job_id, basedir = "jobs/manifest"):
         self.job_id = job_id
-        self.url_key = url_key
         self.basedir = os.path.join(basedir, f"{job_id}.d")
         self.jobs = job_queue()
         self.job = self.jobs.get_job(self.job_id)
@@ -110,9 +109,9 @@ class bwa_manifest:
         with open(warc_path, "rb") as f:
             return "sha256:" + hashlib.sha256(f.read()).hexdigest()
 
-    def get_previous_hash_from_qdn(self):
+    def get_previous_hash_from_qdn(self, url_key):
         """Query QDN for existing resources, find the latest for this url_key, and return its content hash."""
-        manifests = self.get_manifests_for_url_key(self.url_key)
+        manifests = self.get_manifests_for_url_key(url_key)
         if manifests:
             # Find the latest: the one with no previous_hash
             for ident, manifest, _ in manifests:
@@ -122,7 +121,7 @@ class bwa_manifest:
             return manifests[0][1].get('content_hash')
         return None
 
-    def publish(self):
+    def publish(self, url_key):
         # Compute current content hash
         current_hash = self.content_hash()
         if not current_hash:
@@ -130,7 +129,7 @@ class bwa_manifest:
             return None
 
         # Get previous hash from QDN
-        previous_hash = self.get_previous_hash_from_qdn()
+        previous_hash = self.get_previous_hash_from_qdn(url_key)
 
         # Compare hashes - only publish if the content hash has chnaged
         if previous_hash != current_hash:
@@ -138,7 +137,7 @@ class bwa_manifest:
             # Content changed or new, proceed to publish
             manifest = {
                 "schema": "big-web-archive/v1",
-                "url_key": self.url_key,
+                "url_key": url_key,
                 "target_url": self.job["url"],
                 "domain": self.job["domain"],
                 "crawl_depth": self.job.get("depth", 2),
