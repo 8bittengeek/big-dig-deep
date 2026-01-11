@@ -309,7 +309,7 @@ class bwa_manifest:
 
         Means: Queries QDN resources, downloads and parses ZIP files to extract manifests matching the url_key.
         """
-        url = f"{self.QDN_API_BASE}/arbitrary/resources"  # Try resources endpoint first
+        url = f"{self.QDN_API_BASE}/arbitrary/resources?service={self.QDN_SERVICE}&name={self.QDN_NAME}"  # Try query string format
         params = {
             "service": self.QDN_SERVICE,
             "name": self.QDN_NAME

@@ -98,7 +98,7 @@ async def get_archive_async(temp_job_id: str, url_key_val: str):
         })
         
         # Fetch from QDN
-        manifest = bwa_manifest(temp_job_id, "jobs/manifest")
+        manifest = bwa_manifest(temp_job_id, "jobs/manifest")  # Correct basedir parameter
         content_hash = manifest.get_most_recent_zip(url_key_val)
         
         if content_hash:
@@ -160,8 +160,26 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
         return job
     
     elif req.op == "get":
-        # Get archived job (async operation)
+        # Get archived job (check local first, then QDN)
         url_key_val = url_key(req.url)
+        
+        # Check if archive already exists locally
+        jobs_list = jobs.list_jobs()
+        
+        # Handle both list and dict return types
+        if hasattr(jobs_list, 'items'):
+            # It's a dictionary-like object
+            jobs_dict = jobs_list
+        else:
+            # It's a list
+            jobs_dict = {job_id: job_data for job_id, job_data in jobs_list}
+        
+        for job_id, job_data in jobs_dict.items():
+            if job_data.get('url_key') == url_key_val and job_data.get('status') == 'complete':
+                extract_dir = os.path.join("jobs", "manifest", job_id, "metadata")
+                if os.path.exists(extract_dir):
+                    return {"path": extract_dir, "content_hash": job_data.get('content_hash'), "local": True}
+        
         # Use a temporary job id for manifest operations
         temp_job_id = f"get_{hash(url_key_val)}"  # simple hash
         
