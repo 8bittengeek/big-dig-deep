@@ -218,6 +218,52 @@ function isValidUrl(string) {
   }
 }
 
+/**
+ * Polls job status updates for running jobs.
+ * Updates job display with current status from backend.
+ * 
+ * @function pollJobStatus
+ * @returns {void}
+ */
+function pollJobStatus() {
+  const rows = document.querySelectorAll('.job-row');
+  rows.forEach(row => {
+    const jobId = row.cells[0].textContent.trim();
+    if (jobId) {
+      // Update status for this specific job
+      updateJobStatus(jobId);
+    }
+  });
+}
+
+/**
+ * Updates status for a specific job.
+ * 
+ * @async
+ * @function updateJobStatus
+ * @param {string} jobId - The ID of the job to update
+ * @returns {Promise<void>}
+ */
+async function updateJobStatus(jobId) {
+  try {
+    const res = await fetch(`${API}/job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: "job", id: jobId })
+    });
+    
+    if (res.ok) {
+      const job = await res.json();
+      const statusCell = document.querySelector(`tr:has(td:first-child:contains("${jobId}")) .job-detail td:nth-child(2)`);
+      if (statusCell && job.status) {
+        statusCell.textContent = job.status;
+      }
+    }
+  } catch (error) {
+    console.error('Error polling job status:', error);
+  }
+}
+
 document.getElementById('submitJob').onclick = async () => {
   const payload = {
     op: "new",
@@ -509,4 +555,5 @@ window.addEventListener('message', e => {
 });
 
 loadJobs();
-setInterval(loadJobs, 3000);
+setInterval(loadJobs, 3000);  // Refresh jobs every 3 seconds
+setInterval(pollJobStatus, 2000);  // Poll job status every 2 seconds

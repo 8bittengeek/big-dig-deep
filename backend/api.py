@@ -104,9 +104,7 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
             jobs.update_job(id,{"status":"started"})
 
             crawl = crawler(id)
-            await run_crawl(crawl)  # Await completion, don't background task
-            
-            jobs.update_job(id,{"status":"complete"})
+            background_tasks.add_task(run_crawl, crawl)  # Run in background
         
         except subprocess.SubprocessError as e:
 
