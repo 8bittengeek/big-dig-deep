@@ -300,19 +300,27 @@ async function loadJobs() {
     tbody.appendChild(row);
     tbody.appendChild(detailRow);
     
-    // Add event listeners for the buttons
+    // Add event listeners for the buttons (clear existing ones first)
     const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
     const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
     
     if (viewLogsBtn) {
-      viewLogsBtn.addEventListener('click', (e) => {
+      // Clone button to remove existing event listeners
+      const newViewLogsBtn = viewLogsBtn.cloneNode(true);
+      viewLogsBtn.parentNode.replaceChild(newViewLogsBtn, viewLogsBtn);
+      
+      newViewLogsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         loadLogs(job.id);
       });
     }
     
     if (getArchiveBtn) {
-      getArchiveBtn.addEventListener('click', (e) => {
+      // Clone button to remove existing event listeners
+      const newGetArchiveBtn = getArchiveBtn.cloneNode(true);
+      getArchiveBtn.parentNode.replaceChild(newGetArchiveBtn, getArchiveBtn);
+      
+      newGetArchiveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         getArchive(job.url);
       });

@@ -83,7 +83,7 @@ class job_queue:
     def remove_job(self, job_id: str) -> bool:
         """Remove a job file by UUID key."""
         job_path = self._job_path(job_id)
-        if os.path.isfile(job_Path):
+        if os.path.isfile(job_path):
             os.remove(job_path)
             return True
         return False
