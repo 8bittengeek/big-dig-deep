@@ -20,6 +20,7 @@ import hashlib
 import base64
 import zipfile
 import requests
+import shutil
 from datetime import datetime, timezone
 from .bwa_jobqueue import job_queue
 # {
@@ -190,6 +191,14 @@ class bwa_manifest:
             
             self.logger.info("Content unchanged, skipping QDN publish")
             return None
+
+        # Cleanup: remove the source directory regardless of publish outcome
+        try:
+            if os.path.exists(self.basedir):
+                shutil.rmtree(self.basedir)
+                self.logger.info(f"Cleaned up source directory: {self.basedir}")
+        except Exception as e:
+            self.logger.error(f"Failed to clean up source directory {self.basedir}: {e}")
 
         return None
 
