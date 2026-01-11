@@ -410,14 +410,16 @@ async function loadLogs(id) {
 }
 
 /**
- * Fetches and displays the archive content for a given URL in a new tab.
+ * Fetches and displays archive content for a given URL in a new tab.
  * 
  * @async
  * @function getArchive
- * @param {string} url - The URL to get the archive for
+ * @param {string} url - The URL to get archive for
  * @returns {Promise<void>}
  */
 async function getArchive(url) {
+  console.log('getArchive called for:', url);
+  
   try {
     const res = await fetch(`${API}/job`, {
       method: 'POST',
@@ -431,7 +433,7 @@ async function getArchive(url) {
       // Create new archive tab
       const tabId = createArchiveTab(url, result.path);
       
-      // Switch to the new tab
+      // Switch to new tab
       switchToArchiveTab(tabId);
       
       // Load the archived content
@@ -443,7 +445,7 @@ async function getArchive(url) {
       document.getElementById('log').textContent = "No archive found for this URL";
     }
   } catch (error) {
-    console.error('Error loading archive:', error);
+    console.error('Error in getArchive:', error);
     document.getElementById('log').textContent = `Error loading archive: ${error.message}`;
   }
 }
@@ -556,12 +558,9 @@ function openArchiveInNewWindow(tabId) {
  */
 async function loadIdentity() {
   try {
-    const response = await Promise.race([
-      qortalRequest({
-        action: "GET_USER_ACCOUNT"
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Identity timeout')), 5000)
-    ]);
+    const response = await qortalRequest({
+      action: "GET_USER_ACCOUNT"
+    });
     document.getElementById('identityName').textContent = response.name || response.address || 'Unknown';
   } catch (e) {
     document.getElementById('identityName').textContent = 'Error loading identity';
