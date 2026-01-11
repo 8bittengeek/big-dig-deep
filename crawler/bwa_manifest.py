@@ -309,7 +309,7 @@ class bwa_manifest:
 
         Means: Queries QDN resources, downloads and parses ZIP files to extract manifests matching the url_key.
         """
-        url = f"{self.QDN_API_BASE}/arbitrary"  # Remove /resources
+        url = f"{self.QDN_API_BASE}/arbitrary/resources"  # Try resources endpoint first
         params = {
             "service": self.QDN_SERVICE,
             "name": self.QDN_NAME
@@ -326,7 +326,7 @@ class bwa_manifest:
                         "Content-Type": "application/json",
                         "Accept": "application/json"
                     }
-                    data_response = requests.get(data_url, timeout=10, headers=headers)  # 10 second timeout
+                    data_response = requests.post(data_url, timeout=10, headers=headers)  # Use POST instead of GET
                     if data_response.status_code == 200:
                         zip_data = io.BytesIO(data_response.content)
                         with zipfile.ZipFile(zip_data, 'r') as zip_file:
