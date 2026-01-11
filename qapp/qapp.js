@@ -11,6 +11,11 @@
 //******************************************************************************/
 const API = 'http://localhost:8000';
 
+// Global state for archive tabs
+let archiveTabs = new Map(); // tabId -> { url, timestamp, path, element }
+let activeArchiveTab = null;
+let tabCounter = 0;
+
 /**
  * Applies theme variables from the parent window to the current document.
  * Retrieves Material Design Color (MDC) theme variables from the parent's computed styles
@@ -40,6 +45,161 @@ function applyHubTheme() {
       document.documentElement.style.setProperty(name, value);
     }
   });
+}
+
+/**
+ * Initializes tab switching functionality.
+ * Sets up event listeners for tab buttons and handles tab content display.
+ * 
+ * @function initTabs
+ * @returns {void}
+ */
+function initTabs() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.getAttribute('data-tab');
+      
+      // Remove active class from all buttons and panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      
+      // Add active class to clicked button and corresponding pane
+      button.classList.add('active');
+      document.getElementById(`${targetTab}-tab`).classList.add('active');
+      
+      // Clear active archive tab when switching to controls
+      if (targetTab === 'controls') {
+        activeArchiveTab = null;
+      }
+    });
+  });
+}
+
+/**
+ * Creates a new archive tab for a given URL.
+ * 
+ * @function createArchiveTab
+ * @param {string} url - The URL being archived
+ * @param {string} path - The local path to the extracted archive
+ * @returns {string} The tab ID
+ */
+function createArchiveTab(url, path) {
+  const tabId = `archive-${++tabCounter}`;
+  const domain = new URL(url).hostname;
+  const tabTitle = domain.length > 20 ? domain.substring(0, 17) + '...' : domain;
+  
+  // Create tab button
+  const tabButton = document.createElement('button');
+  tabButton.className = 'archive-tab';
+  tabButton.setAttribute('data-tab', tabId);
+  tabButton.innerHTML = `
+    <span class="archive-tab-title" title="${url}">${tabTitle}</span>
+    <button class="archive-tab-close" onclick="closeArchiveTab('${tabId}', event)">×</button>
+  `;
+  
+  // Add click handler for tab switching
+  tabButton.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('archive-tab-close')) {
+      switchToArchiveTab(tabId);
+    }
+  });
+  
+  // Create tab content
+  const tabContent = document.createElement('div');
+  tabContent.id = `${tabId}-tab`;
+  tabContent.className = 'tab-pane';
+  tabContent.innerHTML = `
+    <div class="archive-viewer">
+      <div class="archive-header">
+        <h2>Archive Viewer</h2>
+        <div class="archive-info">
+          <span class="archive-url" title="${url}">${url}</span>
+          <span class="archive-timestamp">${new Date().toLocaleString()}</span>
+        </div>
+      </div>
+      
+      <div class="archive-controls">
+        <button class="refresh-archive" onclick="refreshArchive('${tabId}')">Refresh</button>
+        <button class="open-new-window" onclick="openArchiveInNewWindow('${tabId}')">Open in New Window</button>
+      </div>
+
+      <div class="archive-content">
+        <iframe 
+          class="archive-frame" 
+          sandbox="allow-same-origin allow-scripts allow-forms"
+          security="restricted"
+          src="about:blank"
+        ></iframe>
+      </div>
+    </div>
+  `;
+  
+  // Add to DOM
+  document.getElementById('archiveTabs').appendChild(tabButton);
+  document.getElementById('archiveTabContent').appendChild(tabContent);
+  
+  // Store tab data
+  archiveTabs.set(tabId, {
+    url,
+    path,
+    timestamp: new Date().toISOString(),
+    element: tabButton,
+    contentElement: tabContent
+  });
+  
+  return tabId;
+}
+
+/**
+ * Switches to a specific archive tab.
+ * 
+ * @function switchToArchiveTab
+ * @param {string} tabId - The ID of the tab to switch to
+ * @returns {void}
+ */
+function switchToArchiveTab(tabId) {
+  // Remove active class from all tabs
+  document.querySelectorAll('.tab-button, .archive-tab').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+  
+  // Add active class to selected tab
+  const tabData = archiveTabs.get(tabId);
+  if (tabData) {
+    tabData.element.classList.add('active');
+    tabData.contentElement.classList.add('active');
+    activeArchiveTab = tabId;
+  }
+}
+
+/**
+ * Closes an archive tab.
+ * 
+ * @function closeArchiveTab
+ * @param {string} tabId - The ID of the tab to close
+ * @param {Event} event - The click event
+ * @returns {void}
+ */
+function closeArchiveTab(tabId, event) {
+  event.stopPropagation();
+  
+  const tabData = archiveTabs.get(tabId);
+  if (tabData) {
+    // Remove from DOM
+    tabData.element.remove();
+    tabData.contentElement.remove();
+    
+    // Remove from state
+    archiveTabs.delete(tabId);
+    
+    // If closing the active tab, switch to controls
+    if (activeArchiveTab === tabId) {
+      const controlsTab = document.querySelector('[data-tab="controls"]');
+      controlsTab.click();
+    }
+  }
 }
 
 /**
@@ -162,7 +322,7 @@ async function loadLogs(id) {
 }
 
 /**
- * Fetches and displays the archive path for a given URL.
+ * Fetches and displays the archive content for a given URL in a new tab.
  * 
  * @async
  * @function getArchive
@@ -170,16 +330,127 @@ async function loadLogs(id) {
  * @returns {Promise<void>}
  */
 async function getArchive(url) {
-  const res = await fetch(`${API}/job`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op: "get", url: url })
-  });
-  const result = await res.json();
-  if (result.path) {
-    document.getElementById('log').textContent = `Archive extracted to: ${result.path}`;
-  } else {
-    document.getElementById('log').textContent = "No archive found for this URL";
+  try {
+    const res = await fetch(`${API}/job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: "get", url: url })
+    });
+    
+    const result = await res.json();
+    
+    if (result.path) {
+      // Create new archive tab
+      const tabId = createArchiveTab(url, result.path);
+      
+      // Switch to the new tab
+      switchToArchiveTab(tabId);
+      
+      // Load the archived content
+      await loadArchiveContent(tabId, result.path, url);
+      
+      // Update log for reference
+      document.getElementById('log').textContent = `Archive loaded: ${url} -> Tab: ${tabId}`;
+    } else {
+      document.getElementById('log').textContent = "No archive found for this URL";
+    }
+  } catch (error) {
+    console.error('Error loading archive:', error);
+    document.getElementById('log').textContent = `Error loading archive: ${error.message}`;
+  }
+}
+
+/**
+ * Loads archive content into a specific tab's iframe.
+ * 
+ * @async
+ * @function loadArchiveContent
+ * @param {string} tabId - The ID of the tab to load content into
+ * @param {string} path - The local path to the extracted archive
+ * @param {string} originalUrl - The original URL that was archived
+ * @returns {Promise<void>}
+ */
+async function loadArchiveContent(tabId, path, originalUrl) {
+  const tabData = archiveTabs.get(tabId);
+  if (!tabData) return;
+  
+  const iframe = tabData.contentElement.querySelector('.archive-frame');
+  
+  try {
+    // Try to load the snapshot.html first, then fallback to index.html
+    let htmlPath = `${path}/metadata/snapshot.html`;
+    
+    // Check if snapshot.html exists, otherwise try index.html
+    const response = await fetch(`${API}/archive-content?path=${encodeURIComponent(htmlPath)}`);
+    
+    if (response.ok) {
+      const htmlContent = await response.text();
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      iframe.src = url;
+      
+      // Clean up blob URL after loading
+      iframe.onload = () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      // Try index.html as fallback
+      const indexResponse = await fetch(`${API}/archive-content?path=${encodeURIComponent(path + '/index.html')}`);
+      if (indexResponse.ok) {
+        const htmlContent = await indexResponse.text();
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        iframe.src = url;
+        
+        iframe.onload = () => {
+          URL.revokeObjectURL(url);
+        };
+      } else {
+        iframe.srcdoc = '<html><body><h2>Archive content not found</h2><p>The requested archive could not be loaded.</p></body></html>';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading archive content:', error);
+    iframe.srcdoc = '<html><body><h2>Error loading archive</h2><p>There was an error loading the archived content.</p></body></html>';
+  }
+}
+
+/**
+ * Refreshes the content of an archive tab.
+ * 
+ * @async
+ * @function refreshArchive
+ * @param {string} tabId - The ID of the tab to refresh
+ * @returns {Promise<void>}
+ */
+async function refreshArchive(tabId) {
+  const tabData = archiveTabs.get(tabId);
+  if (tabData) {
+    await loadArchiveContent(tabId, tabData.path, tabData.url);
+    // Update timestamp
+    const timestampElement = tabData.contentElement.querySelector('.archive-timestamp');
+    if (timestampElement) {
+      timestampElement.textContent = new Date().toLocaleString();
+    }
+  }
+}
+
+/**
+ * Opens the archive content in a new window.
+ * 
+ * @function openArchiveInNewWindow
+ * @param {string} tabId - The ID of the tab to open in new window
+ * @returns {void}
+ */
+function openArchiveInNewWindow(tabId) {
+  const tabData = archiveTabs.get(tabId);
+  if (tabData) {
+    const iframe = tabData.contentElement.querySelector('.archive-frame');
+    if (iframe.src && iframe.src !== 'about:blank') {
+      window.open(iframe.src, '_blank');
+    }
   }
 }
 
@@ -203,6 +474,7 @@ async function loadIdentity() {
 
 // Apply immediately
 applyHubTheme();
+initTabs();
 loadIdentity();
 
 // Reapply if theme changes (Hub may dispatch event)
