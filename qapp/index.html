@@ -19,65 +19,82 @@
     </div>
   </header>
 
-  <main>
+  <!-- Tab Navigation -->
+  <div class="tab-container">
+    <div class="tab-nav">
+      <button class="tab-button active" data-tab="controls">Archive Controls</button>
+      <div id="archiveTabs" class="archive-tabs">
+        <!-- Dynamic archive tabs will be inserted here -->
+      </div>
+    </div>
 
-    <!-- New crawl job -->
-    <section id="new-job">
-      <h2>New Crawl Job</h2>
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Archive Controls Tab -->
+      <div id="controls-tab" class="tab-pane active">
+        <!-- New crawl job -->
+        <section id="new-job">
+          <h2>New Crawl Job</h2>
 
-      <label>
-        Target URL
-        <input
-          type="text"
-          id="url"
-          placeholder="https://example.com"
-        />
-      </label>
+          <label>
+            Target URL
+            <input
+              type="text"
+              id="url"
+              placeholder="https://example.com"
+            />
+          </label>
 
-      <label>
-        Crawl Depth
-        <select id="depth">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-      </label>
+          <label>
+            Crawl Depth
+            <select id="depth">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
 
-      <label>
-        <input type="checkbox" id="assets" checked />
-        Archive assets (CSS, images, JS)
-      </label>
+          <label>
+            <input type="checkbox" id="assets" checked />
+            Archive assets (CSS, images, JS)
+          </label>
 
-      <button id="submitJob">Submit Job</button>
-    </section>
+          <button id="submitJob">Submit Job</button>
+        </section>
 
-    <!-- Job list -->
-    <section id="jobs">
-      <h2>Jobs</h2>
+        <!-- Job list -->
+        <section id="jobs">
+          <h2>Jobs</h2>
 
-      <table id="jobsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Status</th>
-            <th>Domain</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- populated by qapp.js -->
-        </tbody>
-      </table>
-    </section>
+          <table id="jobsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Domain</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- populated by qapp.js -->
+            </tbody>
+          </table>
+        </section>
 
-    <!-- Logs / output -->
-    <section id="output">
-      <h2>Job Output</h2>
-      <pre id="log">Select a job to view output</pre>
-    </section>
+        <!-- Logs / output -->
+        <section id="output">
+          <h2>Job Output</h2>
+          <pre id="log">Select a job to view output</pre>
+        </section>
+      </div>
 
-  </main>
+      <!-- Dynamic Archive Viewer Tabs -->
+      <div id="archiveTabContent">
+        <!-- Dynamic archive tab content will be inserted here -->
+      </div>
+    </div>
+  </div>
 
   <!-- Q-App logic -->
   <script src="qapp.js"></script>

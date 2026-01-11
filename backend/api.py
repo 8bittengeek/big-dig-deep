@@ -11,6 +11,7 @@
 #*******************************************************************************/
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,7 @@ import subprocess
 import logging
 import json
 import hashlib
+from pathlib import Path
 
 
 app = FastAPI()
@@ -138,6 +140,36 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
     
     else:
         raise HTTPException(400, "Invalid operation")
+
+
+@app.get("/archive-content")
+async def serve_archive_content(path: str):
+    """
+    Serve archived HTML content for display in the Q-App viewer.
+    """
+    try:
+        # Validate the path to prevent directory traversal
+        file_path = Path(path).resolve()
+        
+        # Ensure the path is within allowed directories (jobs/extracted or similar)
+        if not str(file_path).startswith("/app/jobs/") and not str(file_path).startswith("./jobs/"):
+            raise HTTPException(403, "Access denied: Path outside allowed directory")
+        
+        if not file_path.exists():
+            raise HTTPException(404, "File not found")
+        
+        if not file_path.is_file():
+            raise HTTPException(400, "Path is not a file")
+        
+        # Read the file content
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        return PlainTextResponse(content, media_type="text/html")
+        
+    except Exception as e:
+        logging.error(f"Error serving archive content: {e}")
+        raise HTTPException(500, f"Internal server error: {str(e)}")
 
 
 async def run_crawl(crawl):
