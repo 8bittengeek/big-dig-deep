@@ -243,7 +243,7 @@ class bwa_manifest:
                 with open(save_path, 'wb') as f:
                     f.write(zip_bytes)
                 self.logger.info(f"Saved most recent ZIP to {save_path}")
-                return save_path
+                return content_hash
         # If none, save the first one
         if manifests:
             ident, manifest, zip_bytes = manifests[0]
@@ -253,7 +253,7 @@ class bwa_manifest:
             with open(save_path, 'wb') as f:
                 f.write(zip_bytes)
             self.logger.info(f"Saved most recent ZIP to {save_path}")
-            return save_path
+            return content_hash
         return None
 
     def get_all_zips_sorted(self, url_key):
@@ -276,7 +276,7 @@ class bwa_manifest:
                 head = chash
                 break
         
-        saved_paths = []
+        saved_hashes = []
         if not head:
             # If no head, save all
             for ident, manifest, zip_bytes in manifests:
@@ -285,7 +285,7 @@ class bwa_manifest:
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 with open(save_path, 'wb') as f:
                     f.write(zip_bytes)
-                saved_paths.append(save_path)
+                saved_hashes.append(content_hash)
         else:
             # Follow the chain
             current = head
@@ -297,7 +297,7 @@ class bwa_manifest:
                     os.makedirs(os.path.dirname(save_path), exist_ok=True)
                     with open(save_path, 'wb') as f:
                         f.write(zip_bytes)
-                    saved_paths.append(save_path)
+                    saved_hashes.append(content_hash)
                     # Find next: the one whose previous_hash is current
                     next_chash = None
                     for chash, (m, _) in chain.items():
@@ -308,7 +308,7 @@ class bwa_manifest:
                 else:
                     break
         
-        self.logger.info(f"Saved {len(saved_paths)} ZIPs to jobs/manifest/dl/{self.job_id}/{url_key}/")
-        return saved_paths
+        self.logger.info(f"Saved {len(saved_hashes)} ZIPs to jobs/manifest/dl/{self.job_id}/{url_key}/")
+        return saved_hashes
 
 
