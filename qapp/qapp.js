@@ -183,8 +183,27 @@ async function getArchive(url) {
   }
 }
 
+/**
+ * Fetches the user's Qortal identity and updates the UI.
+ * 
+ * @async
+ * @function loadIdentity
+ * @returns {Promise<void>}
+ */
+async function loadIdentity() {
+  try {
+    const response = await qortalRequest({
+      action: "GET_USER_ACCOUNT"
+    });
+    document.getElementById('identityName').textContent = response.name || response.address || 'Unknown';
+  } catch (e) {
+    document.getElementById('identityName').textContent = 'Error loading identity';
+  }
+}
+
 // Apply immediately
 applyHubTheme();
+loadIdentity();
 
 // Reapply if theme changes (Hub may dispatch event)
 window.addEventListener('message', e => {
