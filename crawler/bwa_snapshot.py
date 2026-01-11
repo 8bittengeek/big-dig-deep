@@ -27,27 +27,24 @@ class snapshot:
         self.jobs = job_queue()
         self.job = self.jobs.get_job(self.job_id)
         self.dirpath = dirpath
-        logging.basicConfig(
-            level=logging.INFO,
-            stream=sys.stdout,
-            format="%(asctime)s %(levelname)s %(message)s"
-        )
-
-        # configure root logger *first*
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-            handlers=[logging.StreamHandler(sys.stdout)]
-        )
+        
+        # configure logger for this instance only (don't configure globally)
+        self.logger = logging.getLogger(f"bwa_snapshot.{job_id}")
+        self.logger.setLevel(logging.DEBUG)
+        
+        # Only add handler if logger doesn't already have one
+        if not self.logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(logging.Formatter(
+                "%(asctime)s %(levelname)s %(message)s"
+            ))
+            self.logger.addHandler(handler)
 
         # ensure Uvicorn loggers propagate
         for name in ("uvicorn.error", "uvicorn.access"):
             uv_logger = logging.getLogger(name)
             uv_logger.handlers.clear()
             uv_logger.propagate = True
-
-        self.logger = logging.getLogger("bwa_snapshot")
-        self.logger.setLevel(logging.DEBUG)
 
 
     def fault(self, state, msg):
