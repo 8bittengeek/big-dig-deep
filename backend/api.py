@@ -18,6 +18,7 @@ from fastapi import BackgroundTasks
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from crawler.bwa_crawl import crawler
 from crawler.bwa_jobqueue import job_queue
+from crawler.bwa_manifest import bwa_manifest
 
 import os
 import subprocess
@@ -37,9 +38,11 @@ app.add_middleware(
 jobs = job_queue()
 
 class ArchiveRequest(BaseModel):
-    url: str
-    depth: int
-    assets: bool
+    op: str
+    url: str = ""
+    id: str = ""
+    depth: int = 1
+    assets: bool = False
 
 
 def url_key(canonical_url: str) -> str:
@@ -77,51 +80,64 @@ def url_key(canonical_url: str) -> str:
 
 @app.post("/job")
 async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
-    # Normalize URL string
-    # req.url = normalize_url(req.url)
-    logging.info(req)
-    id = jobs.create_job({
-                            "status":   "queued",
-                            "message":  "",
-                            "url":      req.url, 
-                            "url_hash": url_key(req.url),
-                            "domain":   urlparse(req.url).netloc,
-                            "depth":    req.depth,
-                            "assets":   req.assets
-                        })
-    job = jobs.get_job(id)
-    crawler_data = json.dumps(job) 
-    logging.info(crawler_data)
-    
-    try:
-    
+    if req.op == "new":
+        # Normalize URL string
+        # req.url = normalize_url(req.url)
+        logging.info(req)
+        id = jobs.create_job({
+                                "status":   "queued",
+                                "message":  "",
+                                "url":      req.url, 
+                                "url_hash": url_key(req.url),
+                                "domain":   urlparse(req.url).netloc,
+                                "depth":    req.depth,
+                                "assets":   req.assets
+                            })
+        job = jobs.get_job(id)
+        crawler_data = json.dumps(job) 
         logging.info(crawler_data)
-        jobs.update_job(id,{"status":"started"})
-
-        crawl = crawler(id)
-        background_tasks.add_task(run_crawl, crawl)
         
-        jobs.update_job(id,{"status":"complete"})
+        try:
+        
+            logging.info(crawler_data)
+            jobs.update_job(id,{"status":"started"})
+
+            crawl = crawler(id)
+            background_tasks.add_task(run_crawl, crawl)
+            
+            jobs.update_job(id,{"status":"complete"})
+        
+        except subprocess.SubprocessError as e:
+
+            logging.error(f"Subprocess failed: {e}")
+            jobs.update_job(id,{"status":"failed"})
+        
+        return job
     
-    except subprocess.SubprocessError as e:
-
-        logging.error(f"Subprocess failed: {e}")
-        jobs.update_job(id,{"status":"failed"})
+    elif req.op == "get":
+        # Get archived job
+        url_key_val = url_key(req.url)
+        # Use a temporary job id for manifest operations
+        temp_job_id = f"get_{hash(url_key_val)}"  # simple hash
+        manifest = bwa_manifest(temp_job_id, "jobs/manifest")
+        content_hash = manifest.get_most_recent_zip(url_key_val)
+        if content_hash:
+            extract_dir = manifest.extract_zip(url_key_val, content_hash)
+            return {"path": extract_dir, "content_hash": content_hash}
+        else:
+            raise HTTPException(404, "No archive found for this URL")
     
-    return job
-
-
-@app.get("/job/{id}")
-def get_job(id: str):
-    job = jobs.get_job(id)
-    # if id not in jobs:
-    #     raise HTTPException(404, "Job not found")
-    return job
-
-
-@app.get("/jobs")
-def get_jobs():
-    return jobs.list_jobs()
+    elif req.op == "jobs":
+        return jobs.list_jobs()
+    
+    elif req.op == "job":
+        job = jobs.get_job(req.id)
+        if not job:
+            raise HTTPException(404, "Job not found")
+        return job
+    
+    else:
+        raise HTTPException(400, "Invalid operation")
 
 
 async def run_crawl(crawl):
