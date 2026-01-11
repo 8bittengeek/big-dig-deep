@@ -97,7 +97,7 @@ function createArchiveTab(url, path) {
   tabButton.setAttribute('data-tab', tabId);
   tabButton.innerHTML = `
     <span class="archive-tab-title" title="${url}">${tabTitle}</span>
-    <button class="archive-tab-close" onclick="closeArchiveTab('${tabId}', event)">×</button>
+    <button class="archive-tab-close">×</button>
   `;
   
   // Add click handler for tab switching
@@ -106,6 +106,15 @@ function createArchiveTab(url, path) {
       switchToArchiveTab(tabId);
     }
   });
+  
+  // Add close button handler separately
+  const closeBtn = tabButton.querySelector('.archive-tab-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeArchiveTab(tabId, e);
+    });
+  }
   
   // Create tab content
   const tabContent = document.createElement('div');
@@ -218,6 +227,52 @@ function isValidUrl(string) {
   }
 }
 
+/**
+ * Polls job status updates for running jobs.
+ * Updates job display with current status from backend.
+ * 
+ * @function pollJobStatus
+ * @returns {void}
+ */
+function pollJobStatus() {
+  const rows = document.querySelectorAll('.job-row');
+  rows.forEach(row => {
+    const jobId = row.cells[0].textContent.trim();
+    if (jobId) {
+      // Update status for this specific job
+      updateJobStatus(jobId);
+    }
+  });
+}
+
+/**
+ * Updates status for a specific job.
+ * 
+ * @async
+ * @function updateJobStatus
+ * @param {string} jobId - The ID of the job to update
+ * @returns {Promise<void>}
+ */
+async function updateJobStatus(jobId) {
+  try {
+    const res = await fetch(`${API}/job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: "job", id: jobId })
+    });
+    
+    if (res.ok) {
+      const job = await res.json();
+      const statusCell = document.querySelector(`tr:has(td:first-child:contains("${jobId}")) .job-detail td:nth-child(2)`);
+      if (statusCell && job.status) {
+        statusCell.textContent = job.status;
+      }
+    }
+  } catch (error) {
+    console.error('Error polling job status:', error);
+  }
+}
+
 document.getElementById('submitJob').onclick = async () => {
   const payload = {
     op: "new",
@@ -260,72 +315,79 @@ async function loadJobs() {
   const jobs = Object.values(jobsObj);
 
   const tbody = document.querySelector('#jobsTable tbody');
-  tbody.innerHTML = '';
+  
+  // Only rebuild table if job count changed or first load
+  const currentJobCount = tbody.children.length;
+  const newJobCount = jobs.length;
+  
+  if (currentJobCount === 0 || currentJobCount !== newJobCount) {
+    tbody.innerHTML = '';
+    
+    jobs.forEach(job => {
+      const row = document.createElement('tr');
+      row.className = 'job-row';
 
-  jobs.forEach(job => {
-    const row = document.createElement('tr');
-    row.className = 'job-row';
+      row.innerHTML = `
+        <td>${job.id}</td>
+        <td>${job.status ?? ''}</td>
+        <td>${job.domain ?? ''}</td>
+      `;
 
-    row.innerHTML = `
-      <td>${job.id}</td>
-      <td>${job.status ?? ''}</td>
-      <td>${job.domain ?? ''}</td>
-    `;
+      const detailRow = document.createElement('tr');
+      detailRow.className = 'job-detail';
+      detailRow.style.display = 'none';
 
-    const detailRow = document.createElement('tr');
-    detailRow.className = 'job-detail';
-    detailRow.style.display = 'none';
-
-    detailRow.innerHTML = `
-      <td colspan="3">
-        <div class="detail-grid">
-          <div><strong>URL</strong><br>${job.domain ?? ''}</div>
-          <div><strong>URL</strong><br>${job.url ?? ''}</div>
-          <div><strong>URL Hash</strong><br>${job.url_hash ?? ''}</div>
-          <div><strong>Status</strong><br>${job.status ?? ''}</div>
-          <div><strong>Message</strong><br>${job.message ?? ''}</div>
-          <!-- add as many fields as you want -->
-        </div>
+      detailRow.innerHTML = `
+        <td colspan="3">
+          <div class="detail-grid">
+            <div><strong>URL</strong><br>${job.domain ?? ''}</div>
+            <div><strong>URL</strong><br>${job.url ?? ''}</div>
+            <div><strong>URL Hash</strong><br>${job.url_hash ?? ''}</div>
+            <div><strong>Status</strong><br>${job.status ?? ''}</div>
+            <div><strong>Message</strong><br>${job.message ?? ''}</div>
+            <!-- add as many fields as you want -->
+          </div>
         <button class="view-logs-btn" data-job-id="${job.id}">View Logs</button>
         <button class="get-archive-btn" data-job-url="${job.url}">Get Archive</button>
-      </td>
-    `;
+        </td>
+      `;
 
-    row.onclick = () => {
-      const isOpen = detailRow.style.display === 'table-row';
-      document.querySelectorAll('.job-detail').forEach(r => r.style.display = 'none');
-      detailRow.style.display = isOpen ? 'none' : 'table-row';
-    };
+      row.onclick = () => {
+        const isOpen = detailRow.style.display === 'table-row';
+        document.querySelectorAll('.job-detail').forEach(r => r.style.display = 'none');
+        detailRow.style.display = isOpen ? 'none' : 'table-row';
+      };
 
-    tbody.appendChild(row);
-    tbody.appendChild(detailRow);
-    
-    // Add event listeners for the buttons (clear existing ones first)
-    const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
-    const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
-    
-    if (viewLogsBtn) {
-      // Clone button to remove existing event listeners
-      const newViewLogsBtn = viewLogsBtn.cloneNode(true);
-      viewLogsBtn.parentNode.replaceChild(newViewLogsBtn, viewLogsBtn);
+      tbody.appendChild(row);
+      tbody.appendChild(detailRow);
       
-      newViewLogsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        loadLogs(job.id);
-      });
-    }
-    
-    if (getArchiveBtn) {
-      // Clone button to remove existing event listeners
-      const newGetArchiveBtn = getArchiveBtn.cloneNode(true);
-      getArchiveBtn.parentNode.replaceChild(newGetArchiveBtn, getArchiveBtn);
+      // Add event listeners for the buttons (clear existing ones first)
+      const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
+      const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
       
-      newGetArchiveBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        getArchive(job.url);
-      });
-    }
-  });
+      if (viewLogsBtn) {
+        // Clone button to remove existing event listeners
+        const newViewLogsBtn = viewLogsBtn.cloneNode(true);
+        viewLogsBtn.parentNode.replaceChild(newViewLogsBtn, viewLogsBtn);
+        
+        newViewLogsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadLogs(job.id);
+        });
+      }
+      
+      if (getArchiveBtn) {
+        // Clone button to remove existing event listeners
+        const newGetArchiveBtn = getArchiveBtn.cloneNode(true);
+        getArchiveBtn.parentNode.replaceChild(newGetArchiveBtn, getArchiveBtn);
+        
+        newGetArchiveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          getArchive(job.url);
+        });
+      }
+    });
+  }
 }
 
 /**
@@ -348,14 +410,16 @@ async function loadLogs(id) {
 }
 
 /**
- * Fetches and displays the archive content for a given URL in a new tab.
+ * Fetches and displays archive content for a given URL in a new tab.
  * 
  * @async
  * @function getArchive
- * @param {string} url - The URL to get the archive for
+ * @param {string} url - The URL to get archive for
  * @returns {Promise<void>}
  */
 async function getArchive(url) {
+  console.log('getArchive called for:', url);
+  
   try {
     const res = await fetch(`${API}/job`, {
       method: 'POST',
@@ -365,25 +429,73 @@ async function getArchive(url) {
     
     const result = await res.json();
     
-    if (result.path) {
-      // Create new archive tab
+    if (result.status === "fetching") {
+      // Archive is being fetched, start polling for completion
+      document.getElementById('log').textContent = `Fetching archive: ${url} (Job ID: ${result.job_id})`;
+      
+      // Poll for completion
+      pollArchiveCompletion(result.job_id, url);
+      
+    } else if (result.path) {
+      // Archive already available
       const tabId = createArchiveTab(url, result.path);
-      
-      // Switch to the new tab
       switchToArchiveTab(tabId);
-      
-      // Load the archived content
       await loadArchiveContent(tabId, result.path, url);
-      
-      // Update log for reference
       document.getElementById('log').textContent = `Archive loaded: ${url} -> Tab: ${tabId}`;
     } else {
       document.getElementById('log').textContent = "No archive found for this URL";
     }
   } catch (error) {
-    console.error('Error loading archive:', error);
+    console.error('Error in getArchive:', error);
     document.getElementById('log').textContent = `Error loading archive: ${error.message}`;
   }
+}
+
+/**
+ * Polls for archive fetch completion.
+ * 
+ * @async
+ * @function pollArchiveCompletion
+ * @param {string} jobId - The job ID to poll
+ * @param {string} originalUrl - The original URL being archived
+ * @returns {Promise<void>}
+ */
+async function pollArchiveCompletion(jobId, originalUrl) {
+  const maxAttempts = 30; // 30 attempts = 5 minutes
+  let attempts = 0;
+  
+  const pollInterval = setInterval(async () => {
+    attempts++;
+    
+    try {
+      const res = await fetch(`${API}/job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: "job", id: jobId })
+      });
+      
+      const job = await res.json();
+      
+      if (job.status === "complete" && job.path) {
+        clearInterval(pollInterval);
+        const tabId = createArchiveTab(originalUrl, job.path);
+        switchToArchiveTab(tabId);
+        await loadArchiveContent(tabId, job.path, originalUrl);
+        document.getElementById('log').textContent = `Archive loaded: ${originalUrl} -> Tab: ${tabId}`;
+        
+      } else if (job.status === "failed") {
+        clearInterval(pollInterval);
+        document.getElementById('log').textContent = `Failed to fetch archive: ${job.message}`;
+        
+      } else if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        document.getElementById('log').textContent = `Timeout fetching archive after ${maxAttempts * 10} seconds`;
+      }
+      
+    } catch (error) {
+      console.error('Error polling archive:', error);
+    }
+  }, 10000); // Poll every 10 seconds
 }
 
 /**
@@ -420,6 +532,8 @@ async function loadArchiveContent(tabId, path, originalUrl) {
       iframe.onload = () => {
         URL.revokeObjectURL(url);
       };
+      
+      console.log(`Archive loaded successfully for tab ${tabId}`);
     } else {
       // Try index.html as fallback
       const indexResponse = await fetch(`${API}/archive-content?path=${encodeURIComponent(path + '/index.html')}`);
@@ -433,8 +547,11 @@ async function loadArchiveContent(tabId, path, originalUrl) {
         iframe.onload = () => {
           URL.revokeObjectURL(url);
         };
+        
+        console.log(`Archive loaded successfully for tab ${tabId} (index.html fallback)`);
       } else {
         iframe.srcdoc = '<html><body><h2>Archive content not found</h2><p>The requested archive could not be loaded.</p></body></html>';
+        console.error(`Failed to load archive content for tab ${tabId}`);
       }
     }
   } catch (error) {
@@ -509,4 +626,5 @@ window.addEventListener('message', e => {
 });
 
 loadJobs();
-setInterval(loadJobs, 3000);
+setInterval(loadJobs, 3000);  // Refresh jobs every 3 seconds
+setInterval(pollJobStatus, 2000);  // Poll job status every 2 seconds

@@ -80,6 +80,52 @@ def url_key(canonical_url: str) -> str:
     ).hexdigest()
 
 
+async def get_archive_async(temp_job_id: str, url_key_val: str):
+    """
+    Asynchronously fetch archive from QDN and update job status.
+    
+    Args:
+        temp_job_id: Temporary job ID for tracking
+        url_key_val: URL key to fetch
+    """
+    try:
+        # Create temporary job for tracking
+        jobs.create_job({
+            "id": temp_job_id,
+            "status": "fetching",
+            "message": "Downloading archive from QDN...",
+            "url_key": url_key_val
+        })
+        
+        # Fetch from QDN
+        manifest = bwa_manifest(temp_job_id, "jobs/manifest")  # Correct basedir parameter
+        content_hash = manifest.get_most_recent_zip(url_key_val)
+        
+        if content_hash:
+            extract_dir = manifest.extract_zip(url_key_val, content_hash)
+            # Update job with success
+            jobs.update_job(temp_job_id, {
+                "status": "complete",
+                "message": f"Archive ready: {extract_dir}",
+                "path": extract_dir,
+                "content_hash": content_hash
+            })
+        else:
+            # Update job with error
+            jobs.update_job(temp_job_id, {
+                "status": "failed",
+                "message": "No archive found for this URL"
+            })
+            
+    except Exception as e:
+        # Update job with error
+        jobs.update_job(temp_job_id, {
+            "status": "failed", 
+            "message": f"Error fetching archive: {str(e)}"
+        })
+        logging.error(f"Error in get_archive_async: {e}")
+
+
 @app.post("/job")
 async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
     if req.op == "new":
@@ -100,14 +146,11 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
         logging.info(crawler_data)
         
         try:
-        
             logging.info(crawler_data)
             jobs.update_job(id,{"status":"started"})
 
             crawl = crawler(id)
-            background_tasks.add_task(run_crawl, crawl)
-            
-            jobs.update_job(id,{"status":"complete"})
+            background_tasks.add_task(run_crawl, crawl)  # Run in background
         
         except subprocess.SubprocessError as e:
 
@@ -117,17 +160,34 @@ async def queue_archive(req: ArchiveRequest, background_tasks: BackgroundTasks):
         return job
     
     elif req.op == "get":
-        # Get archived job
+        # Get archived job (check local first, then QDN)
         url_key_val = url_key(req.url)
+        
+        # Check if archive already exists locally
+        jobs_list = jobs.list_jobs()
+        
+        # Handle both list and dict return types
+        if hasattr(jobs_list, 'items'):
+            # It's a dictionary-like object
+            jobs_dict = jobs_list
+        else:
+            # It's a list
+            jobs_dict = {job_id: job_data for job_id, job_data in jobs_list}
+        
+        for job_id, job_data in jobs_dict.items():
+            if job_data.get('url_key') == url_key_val and job_data.get('status') == 'complete':
+                extract_dir = os.path.join("jobs", "manifest", job_id, "metadata")
+                if os.path.exists(extract_dir):
+                    return {"path": extract_dir, "content_hash": job_data.get('content_hash'), "local": True}
+        
         # Use a temporary job id for manifest operations
         temp_job_id = f"get_{hash(url_key_val)}"  # simple hash
-        manifest = bwa_manifest(temp_job_id, "jobs/manifest")
-        content_hash = manifest.get_most_recent_zip(url_key_val)
-        if content_hash:
-            extract_dir = manifest.extract_zip(url_key_val, content_hash)
-            return {"path": extract_dir, "content_hash": content_hash}
-        else:
-            raise HTTPException(404, "No archive found for this URL")
+        
+        # Run as background task to avoid blocking
+        background_tasks.add_task(get_archive_async, temp_job_id, url_key_val)
+        
+        # Return immediate response with job ID for status tracking
+        return {"status": "fetching", "job_id": temp_job_id, "url_key": url_key_val}
     
     elif req.op == "jobs":
         return jobs.list_jobs()

@@ -43,7 +43,7 @@ from .bwa_jobqueue import job_queue
 class bwa_manifest:
     QDN_SERVICE = "WEBSITE_ARCHIVE"
     QDN_NAME = "big-web-archive"
-    QDN_API_BASE = "http://localhost:8000" 
+    QDN_API_BASE = "http://localhost:62392"  # Qortal QDN API base 
 
     def __init__(self, job_id, basedir = "jobs/manifest"):
         """
@@ -267,8 +267,12 @@ class bwa_manifest:
             identifier = current_hash.replace("sha256:", "")
             publish_url = f"{self.QDN_API_BASE}/arbitrary/{self.QDN_SERVICE}/{self.QDN_NAME}/{identifier}/zip"
             data = {"data": zip_base64}
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
             try:
-                response = requests.post(publish_url, json=data)
+                response = requests.post(publish_url, json=data, headers=headers, timeout=10)  # 10 second timeout
                 if response.status_code == 200:
                     self.logger.info("Successfully published to QDN")
                     return manifest
@@ -305,19 +309,24 @@ class bwa_manifest:
 
         Means: Queries QDN resources, downloads and parses ZIP files to extract manifests matching the url_key.
         """
-        url = f"{self.QDN_API_BASE}/arbitrary/resources"
+        url = f"{self.QDN_API_BASE}/arbitrary/resources?service={self.QDN_SERVICE}&name={self.QDN_NAME}"  # Try query string format
         params = {
             "service": self.QDN_SERVICE,
             "name": self.QDN_NAME
         }
         manifests = []
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)  # 10 second timeout
             if response.status_code == 200:
                 resources = response.json()
+                self.logger.info(f"Successfully retrieved {len(resources)} resources from QDN")
                 for resource in resources:
                     data_url = f"{self.QDN_API_BASE}/arbitrary/{resource['service']}/{resource['name']}/{resource['identifier']}"
-                    data_response = requests.get(data_url)
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    }
+                    data_response = requests.post(data_url, timeout=10, headers=headers)  # Use POST instead of GET
                     if data_response.status_code == 200:
                         zip_data = io.BytesIO(data_response.content)
                         with zipfile.ZipFile(zip_data, 'r') as zip_file:
@@ -326,6 +335,10 @@ class bwa_manifest:
                                 manifest = json.loads(manifest_data.decode('utf-8'))
                                 if manifest.get('url_key') == url_key:
                                     manifests.append((resource['identifier'], manifest, zip_data.getvalue()))
+                    else:
+                        self.logger.error(f"Failed to download resource: {data_response.status_code} {data_response.text}")
+            else:
+                self.logger.error(f"Failed to get resources: {response.status_code} {response.text}")
         except Exception as e:
             self.logger.error(f"Error getting manifests: {e}")
         return manifests
