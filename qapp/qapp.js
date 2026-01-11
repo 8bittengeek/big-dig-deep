@@ -286,8 +286,8 @@ async function loadJobs() {
           <div><strong>Message</strong><br>${job.message ?? ''}</div>
           <!-- add as many fields as you want -->
         </div>
-        <button onclick="loadLogs('${job.id}')">View Logs</button>
-        <button onclick="getArchive('${job.url}')">Get Archive</button>
+        <button class="view-logs-btn" data-job-id="${job.id}">View Logs</button>
+        <button class="get-archive-btn" data-job-url="${job.url}">Get Archive</button>
       </td>
     `;
 
@@ -299,6 +299,24 @@ async function loadJobs() {
 
     tbody.appendChild(row);
     tbody.appendChild(detailRow);
+    
+    // Add event listeners for the buttons
+    const viewLogsBtn = detailRow.querySelector('.view-logs-btn');
+    const getArchiveBtn = detailRow.querySelector('.get-archive-btn');
+    
+    if (viewLogsBtn) {
+      viewLogsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        loadLogs(job.id);
+      });
+    }
+    
+    if (getArchiveBtn) {
+      getArchiveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        getArchive(job.url);
+      });
+    }
   });
 }
 
